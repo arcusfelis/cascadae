@@ -1,0 +1,17 @@
+
+{application, cascadae, [
+	{description, "Server part of rhyacotriton application."},
+	{vsn, "0.1.0"},
+	{modules, []},
+	{registered, [cascadae_sup]},
+	{applications, [
+		kernel,
+		stdlib,
+		crypto,
+		public_key,
+		ssl,
+		cowboy
+	]},
+	{mod, {cascadae, []}},
+	{env, []}
+]}.
