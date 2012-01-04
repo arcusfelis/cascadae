@@ -11,13 +11,32 @@ start() ->
 	application:start(cowboy),
 	application:start(cascadae).
 
+abs_path(Path) -> 
+    filename:join(
+        abs_path_(
+            filename:split(
+                filename:absname(Path)), [])).
+
+abs_path_([".."|T], [_|Stack]) ->
+    abs_path_(T, Stack);
+abs_path_([H|T], Stack) ->
+    abs_path_(T, [H|Stack]);
+abs_path_([], Stack) ->
+    lists:reverse(Stack).
+
+
 start(_Type, _Args) ->
-    StaticDir = filename:join([code:priv_dir(cascadae), "rhyacotriton"]),
+    StaticDir = abs_path(filename:join(
+            [code:priv_dir(cascadae), "rhyacotriton"])),
+%   StaticDir = "/home/user/erlang/cascadae/priv/rhyacotriton",
 	Dispatch = [
 		{'_', [
-            cowboy_static:rule([{dir, StaticDir}, {prefix, [<<"static">>]}]),
-			{[<<"stream">>], bullet_handler, [{handler, c_stream_handler}]},
-			{'_', c_default_handler, []}
+            cowboy_static:rule([
+                {dir, StaticDir}, 
+                {prefix, []}, 
+                {sendfile, false}]),
+			{[<<"stream">>], bullet_handler, [{handler, c_stream_handler}]}
+	%		{'_', c_default_handler, []}
 		]}
 	],
 	cowboy:start_listener(http, 100,

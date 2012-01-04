@@ -1,0 +1,3 @@
+[submodule "priv/rhyacotriton"]
+	path = priv/rhyacotriton
+	url = git://github.com/freeakk/rhyacotriton-build.git
