@@ -1,3 +1,3 @@
 #!/bin/sh
-erl -sname cascadae -pa ../cascadae/ebin -pa deps/*/ebin  \
+erl -name cascadae -pa ../cascadae/ebin -pa deps/*/ebin  \
 	-boot start_sasl -s cascadae 
