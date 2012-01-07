@@ -6,6 +6,7 @@
 -export([init/1]). %% supervisor.
 
 -define(SUPERVISOR, ?MODULE).
+-define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
 
 %% API.
 
@@ -16,4 +17,6 @@ start_link() ->
 %% supervisor.
 
 init([]) ->
-	{ok, {{one_for_one, 10, 10}, []}}.
+    Reloader = ?CHILD(ex_reloader, worker),
+
+	{ok, {{one_for_one, 10, 10}, [Reloader]}}.

@@ -2,6 +2,9 @@
 
 all: app
 
+fast: 
+	@./rebar compile skip_deps=true
+
 app: get-deps
 	@./rebar compile
 

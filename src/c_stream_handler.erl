@@ -24,8 +24,12 @@ stream(<<"get_entire_torrent_list">> = _Data, Req, State) ->
 stream(Data, Req, State) ->
     {reply, Data, Req, State}.
 
-info(_Info, Req, State) ->
-    {ok, Req, State}.
+info({'diff_list', Diff}=_Info, Req, State) ->
+    Respond = [{'event', <<"dataUpdated">>} 
+              ,{'data', [{'rows', Diff}]}
+              ],
+    EncodedRespond = jsx:term_to_json(Respond),
+    {reply, EncodedRespond, Req, State}.
 
 terminate(_Req, _State) ->
     ok.
