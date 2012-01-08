@@ -13,6 +13,7 @@ init(_Transport, Req, _Opts, _Active) ->
 
     {ok, Req, State}.
 
+
 stream(<<"get_entire_torrent_list">> = _Data, Req, State) ->
     Node = State#state.rpc_server,
     Data = c_etorrent_rpc:get_entire_torrent_list(Node),
@@ -21,15 +22,42 @@ stream(<<"get_entire_torrent_list">> = _Data, Req, State) ->
               ],
     EncodedRespond = jsx:term_to_json(Respond),
     {reply, EncodedRespond, Req, State};
-stream(Data, Req, State) ->
-    {reply, Data, Req, State}.
 
-info({'diff_list', Diff}=_Info, Req, State) ->
+stream(Data, Req, State) ->
+    DecodedData = jsx:json_to_term(Data),
+    case proplists:get_value(<<"event">>, DecodedData) of
+    <<"remove">> -> 
+        Id = proplists:get_value(<<"id">>, DecodedData),
+        true = is_number(Id),
+        {reply, Data, Req, State};
+    _ -> 
+        {reply, Data, Req, State}
+    end.
+
+
+info({'diff_list', Rows}=_Info, Req, State) ->
     Respond = [{'event', <<"dataUpdated">>} 
-              ,{'data', [{'rows', Diff}]}
+              ,{'data', [{'rows', Rows}]}
+              ],
+    EncodedRespond = jsx:term_to_json(Respond),
+    {reply, EncodedRespond, Req, State};
+
+info({'add_list', Rows}=_Info, Req, State) ->
+    Respond = [{'event', <<"dataAdded">>} 
+              ,{'data', [{'rows', Rows}]}
+              ],
+    EncodedRespond = jsx:term_to_json(Respond),
+    {reply, EncodedRespond, Req, State};
+
+info({'delete_list', Rows}=_Info, Req, State) ->
+    Respond = [{'event', <<"dataRemoved">>} 
+              ,{'data', [{'rows', Rows}]}
               ],
     EncodedRespond = jsx:term_to_json(Respond),
     {reply, EncodedRespond, Req, State}.
 
+
+
 terminate(_Req, _State) ->
     ok.
+
