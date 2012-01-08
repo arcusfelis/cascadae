@@ -23,6 +23,7 @@ start(_Type, _Args) ->
 	Dispatch = [
 		{'_', [
 			{[<<"stream">>], bullet_handler, [{handler, c_stream_handler}]},
+			{[], c_default_handler, []},
             cowboy_static:rule([
                 {dir, JQueryDir}, 
                 {prefix, "jquery"}, 
