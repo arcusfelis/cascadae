@@ -30,15 +30,18 @@
 -type json_pl() :: [{atom(), term()}].
 
 -record(torrent, {
-    'id'       :: torrent_id(),
-    'left'     :: integer(),
-    'leechers' :: integer(),
-    'seeders'  :: integer(),
+    'id'         :: torrent_id(),
+    'left'       :: integer(),
+    'leechers'   :: integer(),
+    'seeders'    :: integer(),
     'all_time_downloaded' :: integer(),
     'all_time_uploaded'   :: integer(),
     'downloaded' :: integer(),
     'uploaded'   :: integer(),
-    'state'    :: atom()
+    'state'      :: atom(),
+
+    'speed_in'  = 0 :: integer(),
+    'speed_out' = 0 :: integer()
 }).
 
 % {id,1},
@@ -73,7 +76,8 @@
     remote_node :: node(),
     timer :: reference(),
     torrents :: [#torrent{}],
-    handler :: pid()
+    handler :: pid(),
+    tick :: integer()
 }).
 
 
@@ -85,6 +89,7 @@ start_link() ->
     Handler = self(),
     Config = [{'node', 'etorrent@127.0.0.1'}
              ,{'cookie', 'etorrent'}
+             ,{'refresh_interval', 2000} % in ms
              ],
     Args = [Handler, Config],
     gen_server:start_link(?MODULE, Args, []).
@@ -97,6 +102,7 @@ start_link() ->
 
 init([Handler, Config]) ->
     RemoteNode = proplists:get_value('node', Config),
+    Tick = proplists:get_value('refresh_interval', Config),
 
     % Connect to the etorrent node
     case proplists:get_value('cookie', Config) of
@@ -107,20 +113,21 @@ init([Handler, Config]) ->
     end,
     true = net_kernel:connect_node(RemoteNode),
 
-    {ok, TRef} = timer:send_interval(1000, 'tick'),
+    {ok, TRef} = timer:send_interval(Tick, 'tick'),
 
     PLs = torrent_list_rpc_call(RemoteNode),
     UnsortedNewTorrents = lists:map(
         fun etorrent_pl_to_list_of_records/1,
         PLs),
-    NewTorrents = sort_list(UnsortedNewTorrents),
+    NewTorrents = sort_records(UnsortedNewTorrents),
 
     State = #state{
         config = Config,
         remote_node = RemoteNode,
         timer = TRef,
         handler = Handler,
-        torrents = NewTorrents
+        torrents = NewTorrents,
+        tick = Tick
     },
 
     {ok, State}.
@@ -147,18 +154,22 @@ search([], _F) ->
 handle_info('tick'=_Info, State=#state{
         torrents=OldTorrents, 
         remote_node=RemoteNode,
-        handler=Handler}) ->
+        handler=Handler,
+        tick=Tick}) ->
     % proplists from etorrent.
     PLs = torrent_list_rpc_call(RemoteNode),
     UnsortedNewTorrents = lists:map(
         fun etorrent_pl_to_list_of_records/1,
         PLs),
-    NewTorrents = sort_list(UnsortedNewTorrents),
+    NewTorrents = sort_records(UnsortedNewTorrents),
+
+
+    NewTorrents2 = calc_speed_records(OldTorrents, NewTorrents, Tick),
 
     #diff_acc{
         diff=Diff, 
         added=Added, 
-        deleted=Deleted} = diff_list(OldTorrents, NewTorrents),
+        deleted=Deleted} = diff_records(OldTorrents, NewTorrents2),
 
     case Diff of
     [] -> 'skip';
@@ -192,7 +203,7 @@ handle_info('tick'=_Info, State=#state{
         Handler ! {'delete_list', Deleted}
     end,
 
-    {noreply, State#state{torrents=NewTorrents}}.
+    {noreply, State#state{torrents=NewTorrents2}}.
 
 
 terminate(_Reason, _State) ->
@@ -273,57 +284,111 @@ etorrent_pl_to_list_of_records(X) ->
 
 
 %% @doc Sort a list by id.
--spec sort_list([#torrent{}]) -> [#torrent{}].
-sort_list(List) ->
+-spec sort_records([#torrent{}]) -> [#torrent{}].
+sort_records(List) ->
     ComparatorFn = fun(X, Y) ->
             X#torrent.id > Y#torrent.id
         end,
     lists:sort(ComparatorFn, List).
 
-diff_list(Olds, News) ->
-    diff_list(Olds, News, #diff_acc{}).
+
+calc_speed_records(Olds, News, Tick) ->
+    FU = fun(#torrent{uploaded=X, speed_out=0}, 
+             #torrent{uploaded=X, speed_out=0}=New) -> New;
+            (#torrent{uploaded=X}, 
+             #torrent{uploaded=X}=New) -> New#torrent{speed_out=0};
+            (#torrent{uploaded=O}, 
+             #torrent{uploaded=N}=New) -> 
+                New#torrent{speed_out=calc_speed(O, N, Tick)}
+        end,
+
+    FD = fun(#torrent{downloaded=X, speed_in=0}, 
+             #torrent{downloaded=X, speed_in=0}=New) -> New;
+            (#torrent{downloaded=X}, 
+             #torrent{downloaded=X}=New) -> New#torrent{speed_in=0};
+            (#torrent{downloaded=O}, 
+             #torrent{downloaded=N}=New) -> 
+                New#torrent{speed_in=calc_speed(O, N, Tick)}
+        end,
+
+    F = fun(Old, New) -> FU(Old, FD(Old, New)) end,
+    map_records(F, Olds, News).
+
+
+calc_speed(Old, New, Interval) ->
+    Bytes = New - Old,
+    Seconds = Interval / 1000,
+    Bytes / Seconds.
+
+%% @doc Tip: New torrents will be unchanged.
+map_records(F, Olds, News) ->
+    map_records(F, Olds, News, []).
+
+map_records(F, [Old=#torrent{id=Id} | OldT], 
+               [New=#torrent{id=Id} | NewT], Acc) ->
+    NewAcc = [F(Old, New)|Acc],
+    map_records(F, OldT, NewT, NewAcc);
+
+% Element Old was deleted.
+map_records(F, [#torrent{id=OldId} | OldT], 
+               [#torrent{id=NewId} | _] = NewT, Acc) 
+    when NewId>OldId ->
+    map_records(F, OldT, NewT, Acc);
+
+% Element New was added.
+map_records(F, OldT, 
+               [New | NewT], Acc) -> % Copy new torrent.
+    map_records(F, OldT, NewT, [New | Acc]);
+
+map_records(_F, _OldLeft, _NewLeft, Acc) ->
+    lists:reverse(Acc).
+    
+
+
+diff_records(Olds, News) ->
+    diff_records(Olds, News, #diff_acc{}).
 
 %% @doc Calculate the difference beetween two sets of torrents. 
 %%
 %%      Note: Both lists are sorted.
--spec diff_list([#torrent{}], [#torrent{}]) -> #diff_acc{}.
-diff_list([Old=#torrent{id=Id} | OldT], 
-          [New=#torrent{id=Id} | NewT], Acc) ->
+-spec diff_records([#torrent{}], [#torrent{}]) -> #diff_acc{}.
+diff_records([Old=#torrent{id=Id} | OldT], 
+             [New=#torrent{id=Id} | NewT], Acc) ->
 
     % Compare elements with the same Id.
     case diff_element(Old, New) of
-    false -> diff_list(OldT, NewT, Acc);
+    false -> diff_records(OldT, NewT, Acc);
     Diff  -> 
         L1 = Acc#diff_acc.diff,
         L2 = [Diff | L1],
-        diff_list(OldT, NewT, Acc#diff_acc{diff=L2})
+        diff_records(OldT, NewT, Acc#diff_acc{diff=L2})
     end;
 
 % Example: Element with Id=2 was deleted:
 %          Olds: 1,__OldId=2__,3
 %          News: 1,__NewId=3__
-diff_list([#torrent{id=OldId} | OldT], 
-          [#torrent{id=NewId} | _] = NewT, Acc) when NewId>OldId ->
+diff_records([#torrent{id=OldId} | OldT], 
+             [#torrent{id=NewId} | _] = NewT, Acc) when NewId>OldId ->
     L1 = Acc#diff_acc.deleted,
     L2 = [OldId | L1],
-    diff_list(OldT, NewT, Acc#diff_acc{deleted=L2});
+    diff_records(OldT, NewT, Acc#diff_acc{deleted=L2});
 
 % Element New was added.
-diff_list(OldT, 
-          [#torrent{id=NewId} | NewT], Acc) ->
+diff_records(OldT, 
+             [#torrent{id=NewId} | NewT], Acc) ->
     L1 = Acc#diff_acc.added,
     L2 = [NewId | L1],
-    diff_list(OldT, NewT, Acc#diff_acc{added=L2});
+    diff_records(OldT, NewT, Acc#diff_acc{added=L2});
 
 % Element Old was deleted.
-diff_list([#torrent{id=OldId} | OldT], 
-          [], Acc) ->
+diff_records([#torrent{id=OldId} | OldT], 
+             [], Acc) ->
     L1 = Acc#diff_acc.deleted,
     L2 = [OldId | L1],
-    diff_list(OldT, [], Acc#diff_acc{deleted=L2});
+    diff_records(OldT, [], Acc#diff_acc{deleted=L2});
 
-diff_list([], 
-          [], Acc) ->
+diff_records([], 
+             [], Acc) ->
     Acc.
 
 
@@ -337,6 +402,8 @@ diff_element(Old=#torrent{left=ORem, leechers=OLs, seeders=OSs},
     #torrent{uploaded=NU, downloaded=ND, state=NS}=New,
     #torrent{all_time_uploaded=OATU, all_time_downloaded=OATD}=Old,
     #torrent{all_time_uploaded=NATU, all_time_downloaded=NATD}=New,
+    #torrent{speed_in=OSI, speed_out=OSO}=Old,
+    #torrent{speed_in=NSI, speed_out=NSO}=New,
 
     UnfilteredList = 
     [case ORem of
@@ -370,6 +437,14 @@ diff_element(Old=#torrent{left=ORem, leechers=OLs, seeders=OSs},
     ,case OS of
      NS   -> 'not_modified';
      X    -> {'state', atom_to_binary(X)}
+     end
+    ,case OSO of
+     NSO  -> 'not_modified';
+     X    -> {'speed_out', X} % Byte per second
+     end
+    ,case OSI of
+     NSI  -> 'not_modified';
+     X    -> {'speed_in', X}
      end
     ],
 

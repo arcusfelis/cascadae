@@ -1,5 +1,13 @@
+Another webui for etorrent.
+
+__License__: [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.html)
+
+__Author__: Uvarov Michael ([`freeakk@gmail.com`](mailto:freeakk@gmail.com))
+
+
 Installation and building
 =========================
+
 
 Cascadae uses git submodules. That is why use git clone with the `--recursive`
 parameter.
