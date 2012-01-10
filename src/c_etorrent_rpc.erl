@@ -87,8 +87,10 @@
 
 start_link() ->
     Handler = self(),
-    Config = [{'node', 'etorrent@127.0.0.1'}
-             ,{'cookie', 'etorrent'}
+    Config = [
+%             {'cookie', 'etorrent'}
+              {'cookie', erlang:get_cookie()}
+             ,{'node', 'etorrent@127.0.0.1'}
              ,{'refresh_interval', 2000} % in ms
              ],
     Args = [Handler, Config],
@@ -162,8 +164,6 @@ handle_info('tick'=_Info, State=#state{
         fun etorrent_pl_to_list_of_records/1,
         PLs),
     NewTorrents = sort_records(UnsortedNewTorrents),
-
-
     NewTorrents2 = calc_speed_records(OldTorrents, NewTorrents, Tick),
 
     #diff_acc{
@@ -287,7 +287,7 @@ etorrent_pl_to_list_of_records(X) ->
 -spec sort_records([#torrent{}]) -> [#torrent{}].
 sort_records(List) ->
     ComparatorFn = fun(X, Y) ->
-            X#torrent.id > Y#torrent.id
+            X#torrent.id < Y#torrent.id
         end,
     lists:sort(ComparatorFn, List).
 
@@ -456,3 +456,23 @@ diff_element(Old=#torrent{left=ORem, leechers=OLs, seeders=OSs},
 
 
 atom_to_binary(X) -> list_to_binary(atom_to_list(X)).
+
+
+
+
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+
+sort_records_test_() ->
+    Unsorted = [#torrent{id=1}, #torrent{id=3}, #torrent{id=2}],
+    Sorted = sort_records(Unsorted),
+    [R1, R2, R3] = Sorted,
+
+    [?_assertEqual(R1#torrent.id, 1)
+    ,?_assertEqual(R2#torrent.id, 2)
+    ,?_assertEqual(R3#torrent.id, 3)
+    ].
+
+-endif.

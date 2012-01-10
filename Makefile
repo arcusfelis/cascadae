@@ -15,4 +15,8 @@ clean:
 	@./rebar clean
 	rm -f erl_crash.dump
 
+tests:
+	@./rebar skip_deps=true eunit
+
+
 dist-clean: clean
