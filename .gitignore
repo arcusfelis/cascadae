@@ -1,5 +1,7 @@
 ebin/*
 deps/*
+priv/jquery
+priv/rhyacotriton
 *.swp
 *.dump
 *.trace  
