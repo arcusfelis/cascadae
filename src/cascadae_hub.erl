@@ -22,7 +22,7 @@
         await/3]).
 
 
--define(HANDLER_MODULE, c_stream_handler).
+-define(HANDLER_MODULE, cascadae_stream_handler).
 -define(SERVER, ?MODULE).
 
 -type torrent_id() :: integer().
