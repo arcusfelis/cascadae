@@ -16,7 +16,6 @@ parameter.
 git clone --recursive https://github.com/freeakk/cascadae.git
 cd cascadae
 make
-./start-dev.sh
 ```
 
 Run etorrent.

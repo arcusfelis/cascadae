@@ -17,6 +17,5 @@ start_link() ->
 %% supervisor.
 
 init([]) ->
-    Reloader = ?CHILD(ex_reloader, worker),
-
-	{ok, {{one_for_one, 10, 10}, [Reloader]}}.
+    Hub = ?CHILD(cascadae_hub, worker),
+	{ok, {{one_for_one, 10, 10}, [Hub]}}.

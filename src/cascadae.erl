@@ -22,8 +22,9 @@ start(_Type, _Args) ->
 
 	Dispatch = [
 		{'_', [
-			{[<<"stream">>], bullet_handler, [{handler, c_stream_handler}]},
-			{[], c_default_handler, []},
+			{[<<"stream">>], bullet_handler, 
+                    [{handler, cascadae_stream_handler}]},
+			{[], cascadae_default_handler, []},
             cowboy_static:rule([
                 {dir, JQueryDir}, 
                 {prefix, "jquery"}, 
@@ -38,16 +39,16 @@ start(_Type, _Args) ->
                 {sendfile, false}])
 		]}
 	],
-	cowboy:start_listener(http, 100,
+	cowboy:start_listener(cascadae_http, 100,
 		cowboy_tcp_transport, [{port, 1080}],
 		cowboy_http_protocol, [{dispatch, Dispatch}]
 	),
-	cowboy:start_listener(https, 100,
-		cowboy_ssl_transport, [
-			{port, 1443}, {certfile, "priv/ssl/cert.pem"},
-			{keyfile, "priv/ssl/key.pem"}, {password, "cowboy"}],
-		cowboy_http_protocol, [{dispatch, Dispatch}]
-	),
+%   cowboy:start_listener(https, 100,
+%   	cowboy_ssl_transport, [
+%   		{port, 1443}, {certfile, "priv/ssl/cert.pem"},
+%   		{keyfile, "priv/ssl/key.pem"}, {password, "cowboy"}],
+%   	cowboy_http_protocol, [{dispatch, Dispatch}]
+%   ),
 	cascadae_sup:start_link().
 
 stop(_State) ->
