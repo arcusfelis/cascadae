@@ -8,6 +8,7 @@
 -define(HUB, cascadae_hub).
 
 init(_Transport, Req, _Opts, _Active) ->
+    ok   = ?HUB:add_handler(),
     State = #state{
     },
 
@@ -16,8 +17,6 @@ init(_Transport, Req, _Opts, _Active) ->
 
 stream(<<"get_entire_torrent_list">> = _Data, Req, State) ->
     Data = ?HUB:get_entire_torrent_list(),
-    % Can this be in `init'?
-    ok   = ?HUB:add_handler(),
     Respond = [{'event', <<"dataLoadCompleted">>} 
               ,{'data', [{'rows', Data}]}
               ],
@@ -61,6 +60,13 @@ info({'add_list', Rows}=_Info, Req, State) ->
 info({'delete_list', Rows}=_Info, Req, State) ->
     Respond = [{'event', <<"dataRemoved">>} 
               ,{'data', [{'rows', Rows}]}
+              ],
+    EncodedRespond = jsx:term_to_json(Respond),
+    {reply, EncodedRespond, Req, State};
+
+info({'log_event', Mess}=_Info, Req, State) ->
+    Respond = [{'event', <<"logEvent">>} 
+              ,{'data', Mess}
               ],
     EncodedRespond = jsx:term_to_json(Respond),
     {reply, EncodedRespond, Req, State}.

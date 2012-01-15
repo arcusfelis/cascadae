@@ -6,7 +6,9 @@
 %% ------------------------------------------------------------------
 
 -export([start_link/0]).
--export([get_entire_torrent_list/0, add_handler/0]).
+-export([get_entire_torrent_list/0, 
+        add_handler/0,
+        fire_event/1]).
 
 %% ------------------------------------------------------------------
 %% gen_fsm Function Exports
@@ -19,6 +21,7 @@
 
         active/2,
         active/3,
+        await/2,
         await/3]).
 
 
@@ -49,16 +52,6 @@
     'speed_out' = 0 :: integer()
 }).
 
-% {id,1},
-% {total,9654049623},
-% {left,0},
-% {uploaded,4967590},
-% {downloaded,5531},
-% {all_time_downloaded,9975728691},
-% {all_time_uploaded,878062405},
-% {leechers,13},
-% {seeders,102},
-% {state,seeding}
 
 
 -type torrent_diff() :: [
@@ -104,15 +97,24 @@ init([Timeout]) ->
         tick = Timeout,
         handlers = []
     },
+    
+    % Subscribe on new events.
+    cascadae_event:add(),
 
     {ok, await, SD}.
 
 
 
 
+% Nobody cares about this event.
+await({'log_event', _Mess}, SD) ->
+    {next_state, await, SD}.
+
 
 % Initialization after "sleeping mode".
 await('add_handler', {Pid, _Tag}, SD=#state{tick=Timeout}) ->
+    lager:info("Add the first client on ~w.", [Pid]),
+
     % Registration of the client
     erlang:monitor(process, Pid),
 
@@ -131,6 +133,18 @@ await('add_handler', {Pid, _Tag}, SD=#state{tick=Timeout}) ->
 
     {reply, ok, active, SD1}.
 
+
+active({'log_event', Mess}, SD=#state{
+        torrents=OldTorrents, 
+        handlers=Handlers}) ->
+
+    PL = event_to_json(Mess),
+
+    lists:map(fun(H) ->
+        ?HANDLER_MODULE:send(H, {log_event, PL})
+        end, Handlers),
+
+    {next_state, active, SD};
 
 % It is called because gen_fsm:send_event_after.
 active('update', SD=#state{
@@ -194,6 +208,8 @@ active('update', SD=#state{
 
 % Another client was connected.
 active('add_handler', {Pid, _Tag}, SD=#state{handlers=Hs}) ->
+    lager:info("Add the client on ~w.", [Pid]),
+
     % Registration of the client
     erlang:monitor(process, Pid),
     Hs1 = Hs -- [Pid],
@@ -201,17 +217,22 @@ active('add_handler', {Pid, _Tag}, SD=#state{handlers=Hs}) ->
     {reply, ok, active, SD1}.
 
 
+
 handle_info({'DOWN', _Ref, process, Pid, _Reason}=_Info, 
         'active'=_SN,
         SD=#state{handlers=Hs, timer=TRef}) ->
+
     case Hs -- [Pid] of
         [] ->
             % Go to the sleeping mode.
             gen_fsm:cancel_timer(TRef),
             SD1 = SD#state{handlers=[], torrents=undefined},
+            lager:info("Delete the last client on ~w.", [Pid]),
             {next_state, 'await', SD1};
+
         NHs ->
             % Just continue.
+            lager:info("Delete the client on ~w.", [Pid]),
             {next_state, 'active', SD#state{handlers=NHs}}
     end.
     
@@ -229,9 +250,16 @@ get_entire_torrent_list() ->
     json_torrent_list().
 
 
+%% @doc Subscribes this process on new messages.
+%%      It is used in bullet handler.
+%%      You can also run this into your console and use `flush()'.
 add_handler() ->
     gen_fsm:sync_send_event(?SERVER, 'add_handler').
 
+%% @doc Sends message from `etorrent_event'. 
+%%      This function is called by cascadae_event.
+fire_event(Mess) ->
+    gen_fsm:send_event(?SERVER, {'log_event', Mess}).
 
 
 %% ------------------------------------------------------------------
@@ -483,6 +511,29 @@ search([H|T], F) ->
     end;
 search([], _F) ->
     false.
+
+
+
+event_to_json({Name, Id})
+    when Name =:= 'checking_torrent'; 
+         Name =:= 'started_torrent';
+         Name =:= 'stopped_torrent' ->
+    [{name, atom_to_binary(Name)}
+    ,{id, Id}];
+
+event_to_json({Name, Id, Message})
+    when Name =:= 'tracker_error' ->
+    [{name, atom_to_binary(Name)}
+    ,{id, Id} 
+    ,{message, list_to_binary(Message)}];
+
+event_to_json(E) ->
+    [{name, <<"unknown">>}
+    ,{message, to_binary(E)}].
+
+
+to_binary(Term) ->
+    list_to_binary(io_lib:format("~w", [Term])).
 
 
 -ifdef(TEST).
