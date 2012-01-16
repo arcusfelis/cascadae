@@ -10,9 +10,8 @@
 		crypto,
 		public_key,
 		ssl,
-		cowboy_static,
-        bullet,
-        jsx
+		cowboy
 	]},
+	{mod, {cascadae, []}},
 	{env, []}
 ]}.
