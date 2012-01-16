@@ -98,9 +98,6 @@ init([Timeout]) ->
         tick = Timeout,
         handlers = []
     },
-    
-    % Subscribe on new events.
-    cascadae_event:add(),
 
     {ok, await, SD}.
 
@@ -118,6 +115,9 @@ await('add_handler', {Pid, _Tag}, SD=#state{tick=Timeout}) ->
 
     % Registration of the client
     erlang:monitor(process, Pid),
+    
+    % Subscribe on new events.
+    cascadae_event:add(),
 
     % Collect data
     PLs = query_torrent_list(),
@@ -225,6 +225,8 @@ handle_info({'DOWN', _Ref, process, Pid, _Reason}=_Info,
 
     case Hs -- [Pid] of
         [] ->
+            cascadae_event:delete(),
+
             % Go to the sleeping mode.
             gen_fsm:cancel_timer(TRef),
             SD1 = SD#state{handlers=[], torrents=undefined},

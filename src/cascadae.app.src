@@ -15,5 +15,6 @@
         bullet,
         jsx
 	]},
+    {mod, {cascadae, []}},
 	{env, []}
 ]}.
