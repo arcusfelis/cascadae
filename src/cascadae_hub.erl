@@ -6,7 +6,7 @@
 %% ------------------------------------------------------------------
 
 -export([start_link/0]).
--export([get_entire_torrent_list/0, 
+-export([all_torrents/0, 
         add_handler/0,
         fire_event/1]).
 
@@ -31,7 +31,7 @@
 -type torrent_id() :: integer().
 
 
-% There is four different formats of torrent.
+% There are 4 different formats of torrent.
 -type etorrent_pl()  :: [{atom(), term()}].
 -type etorrent_pl2() :: [{atom(), term()}].
 
@@ -59,6 +59,7 @@
         | {'left', integer()} 
         | {'leechers', integer()}
         | {'seeders', integer()}
+        | {atom(), term()}
     ].
 
 
@@ -245,8 +246,8 @@ code_change(_OldVsn, SN, SD, _Extra) ->
     {ok, SN, SD}.
 
 
--spec get_entire_torrent_list() -> [json_pl()].
-get_entire_torrent_list() ->
+-spec all_torrents() -> [json_pl()].
+all_torrents() ->
     json_torrent_list().
 
 
@@ -500,6 +501,10 @@ diff_element(Old=#torrent{left=ORem, leechers=OLs, seeders=OSs},
     end.
 
 
+to_binary(Term) ->
+    list_to_binary(io_lib:format("~w", [Term])).
+
+
 atom_to_binary(X) -> list_to_binary(atom_to_list(X)).
 
 
@@ -530,10 +535,6 @@ event_to_json({Name, Id, Message})
 event_to_json(E) ->
     [{name, <<"unknown">>}
     ,{message, to_binary(E)}].
-
-
-to_binary(Term) ->
-    list_to_binary(io_lib:format("~w", [Term])).
 
 
 -ifdef(TEST).

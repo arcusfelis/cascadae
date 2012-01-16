@@ -15,13 +15,26 @@ init(_Transport, Req, _Opts, _Active) ->
     {ok, Req, State}.
 
 
-stream(<<"get_entire_torrent_list">> = _Data, Req, State) ->
-    Data = ?HUB:get_entire_torrent_list(),
+stream(<<"all_torrents">> = _Data, Req, State) ->
+    Data = ?HUB:all_torrents(),
     Respond = [{'event', <<"dataLoadCompleted">>} 
               ,{'data', [{'rows', Data}]}
               ],
     EncodedRespond = jsx:term_to_json(Respond),
     {reply, EncodedRespond, Req, State};
+
+stream(<<"all_peers">> = _Data, Req, State) ->
+    case cascadae_peers:all_peers() of
+    [] ->
+        {ok, Req, State};
+
+    Data ->
+        Respond = [{'event', <<"peerDataLoadCompleted">>} 
+                  ,{'data', [{'rows', Data}]}
+                  ],
+        EncodedRespond = jsx:term_to_json(Respond),
+        {reply, EncodedRespond, Req, State}
+    end;
 
 stream(Data, Req, State) ->
     DecodedData = jsx:json_to_term(Data),
