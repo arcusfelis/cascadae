@@ -1,6 +1,7 @@
 [submodule "priv/rhyacotriton"]
 	path = priv/rhyacotriton
 	url = git://github.com/freeakk/rhyacotriton-build.git
+    ignore = untracked
 [submodule "priv/jquery"]
 	path = priv/jquery
 	url = git://github.com/freeakk/jquery-latest.git
