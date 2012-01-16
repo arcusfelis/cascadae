@@ -3,7 +3,7 @@
 
 -module(cascadae_event).
 -behaviour(gen_event).
--export([add/0, remove/0]).
+-export([add/0, delete/0]).
 -export([init/1, 
         handle_event/2, 
         terminate/2]).
@@ -12,7 +12,7 @@
 add() ->
     etorrent_event:add_handler(?MODULE, []).
 
-remove() ->
+delete() ->
     gen_event:add_handler(etorrent_event, ?MODULE, []).
 
 % ---------------------------------------------------------
