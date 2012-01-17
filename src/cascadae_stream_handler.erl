@@ -24,17 +24,12 @@ stream(<<"all_torrents">> = _Data, Req, State) ->
     {reply, EncodedRespond, Req, State};
 
 stream(<<"all_peers">> = _Data, Req, State) ->
-    case cascadae_peers:all_peers() of
-    [] ->
-        {ok, Req, State};
-
-    Data ->
-        Respond = [{'event', <<"peerDataLoadCompleted">>} 
-                  ,{'data', [{'rows', Data}]}
-                  ],
-        EncodedRespond = jsx:term_to_json(Respond),
-        {reply, EncodedRespond, Req, State}
-    end;
+    Data = cascadae_peers:all_peers(),
+    Respond = [{'event', <<"peerDataLoadCompleted">>} 
+              ,{'data', [{'rows', Data}]}
+              ],
+    EncodedRespond = jsx:term_to_json(Respond),
+    {reply, EncodedRespond, Req, State};
 
 stream(Data, Req, State) ->
     DecodedData = jsx:json_to_term(Data),
