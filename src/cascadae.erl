@@ -9,6 +9,10 @@ start() ->
 	application:start(public_key),
 	application:start(ssl),
 	application:start(cowboy),
+	application:start(jsx),
+	application:start(bullet),
+	application:start(sendfile),
+	application:start(cowboy_static),
 	application:start(cascadae).
 
 
