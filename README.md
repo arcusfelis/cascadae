@@ -8,16 +8,6 @@ __Author__: Uvarov Michael ([`freeakk@gmail.com`](mailto:freeakk@gmail.com))
 Installation and building
 =========================
 
-
-Cascadae uses git submodules. That is why use git clone with the `--recursive`
-parameter.
-
-```
-git clone --recursive https://github.com/freeakk/cascadae.git
-cd cascadae
-make
-```
-
 Run etorrent.
 Open http://127.0.0.1:1080
 
