@@ -241,6 +241,7 @@ handle_info({'DOWN', _Ref, process, Pid, _Reason}=_Info,
     
 
 terminate(_Reason, _SN, _SD) ->
+    cascadae_event:delete(),
     ok.
 
 
@@ -304,6 +305,7 @@ form_json_proplist_fn() ->
                         proplists:get_value('all_time_downloaded', X)}
         ,{'all_time_uploaded',  
                         proplists:get_value('all_time_uploaded', X)}
+        ,{'pid',        to_binary(etorrent_torrent_ctl:lookup_server(Id))}
         ]
     end.
 
@@ -526,12 +528,12 @@ event_to_json({Name, Id})
          Name =:= 'started_torrent';
          Name =:= 'stopped_torrent' ->
     [{name, atom_to_binary(Name)}
-    ,{id, Id}];
+    ,{torrent_id, Id}];
 
 event_to_json({Name, Id, Message})
     when Name =:= 'tracker_error' ->
     [{name, atom_to_binary(Name)}
-    ,{id, Id} 
+    ,{torrent_id, Id} 
     ,{message, list_to_binary(Message)}];
 
 event_to_json(E) ->
