@@ -46,6 +46,31 @@ stream(Data, Req, State) ->
         Ids = proplists:get_value(<<"ids">>, DecodedData),
         lists:map(fun etorrent_ctl:continue/1, Ids),
         {reply, Data, Req, State};
+
+    <<"file_info">> ->
+        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
+        ParentId  = proplists:get_value(<<"parent_id">>, DecodedData),
+        Nodes = etorrent_io:tree_children(TorrentId, ParentId),
+        
+        Respond = [ {'event', <<"fileDataLoadCompleted">>} 
+                  , {'data', [ {'parent', ParentId}
+                             , {'torrent_id', TorrentId}
+                             , {'nodes', Nodes}]}
+                  ],
+        EncodedRespond = jsx:term_to_json(Respond),
+        {reply, EncodedRespond, Req, State};
+
+    <<"wish_files">> ->
+        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
+        Fids      = proplists:get_value(<<"file_ids">>, DecodedData),
+        {ok, NewWishes} = etorrent_torrent_ctl:wish_file(TorrentId, Fids),
+        
+        Respond = [ {'event', <<"newWishList">>} 
+                  , {'data', [ {'torrent_id', TorrentId}
+                             , {'list', NewWishes}]}
+                  ],
+        EncodedRespond = jsx:term_to_json(Respond),
+        {reply, EncodedRespond, Req, State};
     _ -> 
         {reply, Data, Req, State}
     end.
