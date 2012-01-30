@@ -13,7 +13,7 @@ add() ->
     etorrent_event:add_handler(?MODULE, []).
 
 delete() ->
-    gen_event:add_handler(etorrent_event, ?MODULE, []).
+    gen_event:delete_handler(etorrent_event, ?MODULE, []).
 
 % ---------------------------------------------------------
 

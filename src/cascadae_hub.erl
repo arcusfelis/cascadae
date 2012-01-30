@@ -287,15 +287,22 @@ query_torrent_list() ->
 %% @end
 form_json_proplist_fn() ->
     fun(X) ->
+        %% Data from etorrent_torrent
         Id = proplists:get_value('id', X),
+        %% Data from tracking_map (etorrent_table)
         PL = get_torrent(Id),
         Name = proplists:get_value('filename', PL),
+
+        IsOnline = case proplists:get_value('state', PL) of
+                'started' -> true;
+                _ -> false
+            end,
 
         [{'id',         Id}
         ,{'name',       list_to_binary(Name)}
         ,{'total',      proplists:get_value('total', X)}
         ,{'left',       proplists:get_value('left', X)}
-        ,{'online',    'false'}
+        ,{'online',     IsOnline}
         ,{'leechers',   proplists:get_value('leechers', X)}
         ,{'seeders',    proplists:get_value('seeders', X)}
         ,{'state',      atom_to_binary(proplists:get_value('state', X))}

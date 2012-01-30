@@ -49,12 +49,17 @@ stream(Data, Req, State) ->
 
     <<"file_info">> ->
         TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
-        ParentId  = proplists:get_value(<<"parent_id">>, DecodedData),
-        Nodes = etorrent_io:tree_children(TorrentId, ParentId),
+        Parents   = proplists:get_value(<<"parent_ids">>, DecodedData),
+
+        Nodes = lists:map(fun(ParentId) ->
+                Children = etorrent_io:tree_children(TorrentId, ParentId),
+                [ {'parent_id', ParentId}
+                , {'children', Children}
+                ]
+            end, Parents),
         
         Respond = [ {'event', <<"fileDataLoadCompleted">>} 
-                  , {'data', [ {'parent', ParentId}
-                             , {'torrent_id', TorrentId}
+                  , {'data', [ {'torrent_id', TorrentId}
                              , {'nodes', Nodes}]}
                   ],
         EncodedRespond = jsx:term_to_json(Respond),
