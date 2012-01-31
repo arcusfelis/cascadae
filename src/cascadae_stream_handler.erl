@@ -38,10 +38,12 @@ stream(Data, Req, State) ->
         Id = proplists:get_value(<<"id">>, DecodedData),
         true = is_number(Id),
         {reply, Data, Req, State};
+
     <<"pause">> -> 
         Ids = proplists:get_value(<<"ids">>, DecodedData),
         lists:map(fun etorrent_ctl:pause/1, Ids),
         {reply, Data, Req, State};
+
     <<"continue">> -> 
         Ids = proplists:get_value(<<"ids">>, DecodedData),
         lists:map(fun etorrent_ctl:continue/1, Ids),
@@ -65,20 +67,46 @@ stream(Data, Req, State) ->
         EncodedRespond = jsx:term_to_json(Respond),
         {reply, EncodedRespond, Req, State};
 
+    <<"wish_list">> ->
+        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
+        {ok, Wishes} = etorrent_torrent_ctl:get_wishes(TorrentId),
+
+        EncodedRespond = encode_wishes(TorrentId, Wishes),
+        {reply, EncodedRespond, Req, State};
+
+    <<"replace_wish_list">> ->
+        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
+        Wishes = proplists:get_value(<<"list">>, DecodedData),
+        {ok, Wishes1} = etorrent_torrent_ctl:set_wishes(TorrentId, Wishes),
+        {ok, Req, State};
+
     <<"wish_files">> ->
         TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
         Fids      = proplists:get_value(<<"file_ids">>, DecodedData),
         {ok, NewWishes} = etorrent_torrent_ctl:wish_file(TorrentId, Fids),
         
-        Respond = [ {'event', <<"newWishList">>} 
-                  , {'data', [ {'torrent_id', TorrentId}
-                             , {'list', NewWishes}]}
-                  ],
-        EncodedRespond = jsx:term_to_json(Respond),
+        EncodedRespond = encode_wishes(TorrentId, NewWishes),
         {reply, EncodedRespond, Req, State};
     _ -> 
         {reply, Data, Req, State}
     end.
+
+
+encode_wishes(TorrentId, Wishes) ->
+    List = [
+        begin
+          %%  unicode:characters_to_binary(io_lib:format("~w", [X]))
+          [ {'name', etorrent_io:long_file_name(TorrentId, X)}
+          , {'value', X}
+          ]
+        end
+        || X <- Wishes],
+    
+    Respond = [ {'event', <<"wishDataLoadCompleted">>} 
+              , {'data', [ {'torrent_id', TorrentId}
+                         , {'list', List}]}
+              ],
+    jsx:term_to_json(Respond).
 
 
 info({'diff_list', Rows}=_Info, Req, State) ->
