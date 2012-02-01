@@ -93,20 +93,38 @@ stream(Data, Req, State) ->
 
 
 encode_wishes(TorrentId, Wishes) ->
-    List = [
-        begin
-          %%  unicode:characters_to_binary(io_lib:format("~w", [X]))
-          [ {'name', etorrent_io:long_file_name(TorrentId, X)}
-          , {'value', X}
-          ]
-        end
-        || X <- Wishes],
-    
+    XX   = [encode_wish(TorrentId, X) || X <- Wishes],
+    List = [Y || Y <- XX, Y =/= false],
+
     Respond = [ {'event', <<"wishDataLoadCompleted">>} 
               , {'data', [ {'torrent_id', TorrentId}
                          , {'list', List}]}
               ],
     jsx:term_to_json(Respond).
+
+
+encode_wish(TorrentId, X) ->
+    V = proplists:get_value('value', X),
+    C = proplists:get_value('is_completed', X),
+
+    case proplists:get_value('type', X) of
+    'file' ->
+          [ {'name', etorrent_io:long_file_name(TorrentId, V)}
+          , {'value', V}
+          , {'is_completed', C}
+          , {'type', <<"file">>}
+          ];
+
+    'piece' ->
+          Name = unicode:characters_to_binary(io_lib:format("~w", [V])),
+          [ {'name', Name}
+          , {'value', V}
+          , {'is_completed', C}
+          , {'type', <<"piece">>}
+          ];
+
+    _ -> false
+    end.
 
 
 info({'diff_list', Rows}=_Info, Req, State) ->
