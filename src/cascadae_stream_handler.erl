@@ -49,7 +49,8 @@ stream(Data, Req, State) ->
         lists:map(fun etorrent_ctl:continue/1, Ids),
         {reply, Data, Req, State};
 
-    <<"file_info">> ->
+    <<"file_list">> ->
+        %% Load file list
         TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
         Parents   = proplists:get_value(<<"parent_ids">>, DecodedData),
 
@@ -76,7 +77,15 @@ stream(Data, Req, State) ->
 
     <<"replace_wish_list">> ->
         TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
-        Wishes = proplists:get_value(<<"list">>, DecodedData),
+        List = proplists:get_value(<<"list">>, DecodedData),
+        Wishes = [[{ binary_to_existing_atom(K)
+                   , if
+                        is_binary(V) -> binary_to_existing_atom(V);
+                        true -> V
+                     end} 
+                    || {K, V} <- X, K =/= <<"name">>] || X <- List],
+        error_logger:info_msg("Set new wishes ~p for torrent ~B.",
+            [Wishes, TorrentId]),
         {ok, Wishes1} = etorrent_torrent_ctl:set_wishes(TorrentId, Wishes),
         {ok, Req, State};
 
@@ -87,9 +96,20 @@ stream(Data, Req, State) ->
         
         EncodedRespond = encode_wishes(TorrentId, NewWishes),
         {reply, EncodedRespond, Req, State};
+
+    <<"file_info">> ->
+        %% Load tracks list
+        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
+        FileId    = proplists:get_value(<<"file_id">>, DecodedData),
+        {ok, Req, State};
+
     _ -> 
         {reply, Data, Req, State}
     end.
+
+
+binary_to_existing_atom(X) ->
+    list_to_existing_atom(binary_to_list(X)).
 
 
 encode_wishes(TorrentId, Wishes) ->
@@ -106,12 +126,14 @@ encode_wishes(TorrentId, Wishes) ->
 encode_wish(TorrentId, X) ->
     V = proplists:get_value('value', X),
     C = proplists:get_value('is_completed', X),
+    T = proplists:get_value('is_transient', X),
 
     case proplists:get_value('type', X) of
     'file' ->
           [ {'name', etorrent_io:long_file_name(TorrentId, V)}
           , {'value', V}
           , {'is_completed', C}
+          , {'is_transient', T}
           , {'type', <<"file">>}
           ];
 
@@ -120,6 +142,7 @@ encode_wish(TorrentId, X) ->
           [ {'name', Name}
           , {'value', V}
           , {'is_completed', C}
+          , {'is_transient', T}
           , {'type', <<"piece">>}
           ];
 
@@ -151,6 +174,15 @@ info({'delete_list', Rows}=_Info, Req, State) ->
 info({'log_event', Mess}=_Info, Req, State) ->
     Respond = [{'event', <<"logEvent">>} 
               ,{'data', Mess}
+              ],
+    EncodedRespond = jsx:term_to_json(Respond),
+    {reply, EncodedRespond, Req, State};
+
+info({'track_list', TorrentId, FileId, Props}=_Info, Req, State) ->
+    Respond = [ {'event', <<"tracksDataLoadCompleted">>} 
+              , {'data', [ {'torrent_id', TorrentId}
+                         , {'file_id', FileId}
+                         , {'rows', Props}]}
               ],
     EncodedRespond = jsx:term_to_json(Respond),
     {reply, EncodedRespond, Req, State}.
