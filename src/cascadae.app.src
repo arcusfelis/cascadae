@@ -10,6 +10,7 @@
 		crypto,
 		public_key,
 		ssl,
+        mimetypes,
 		cowboy,
         cowboy_static,
         bullet,
