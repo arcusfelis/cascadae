@@ -55,7 +55,7 @@ stream(Data, Req, State) ->
         Parents   = proplists:get_value(<<"parent_ids">>, DecodedData),
 
         Nodes = lists:map(fun(ParentId) ->
-                Children = etorrent_io:tree_children(TorrentId, ParentId),
+                Children = etorrent_info:tree_children(TorrentId, ParentId),
                 [ {'parent_id', ParentId}
                 , {'children', Children}
                 ]
@@ -130,7 +130,7 @@ encode_wish(TorrentId, X) ->
 
     case proplists:get_value('type', X) of
     'file' ->
-          [ {'name', etorrent_io:long_file_name(TorrentId, V)}
+          [ {'name', etorrent_info:long_file_name(TorrentId, V)}
           , {'value', V}
           , {'is_completed', C}
           , {'is_transient', T}
