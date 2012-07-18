@@ -55,7 +55,7 @@ stream(Data, Req, State) ->
         Parents   = proplists:get_value(<<"parent_ids">>, DecodedData),
 
         Nodes = lists:map(fun(ParentId) ->
-                Children = etorrent_io:tree_children(TorrentId, ParentId),
+                Children = etorrent_info:tree_children(TorrentId, ParentId),
                 [ {'parent_id', ParentId}
                 , {'children', Children}
                 ]
@@ -97,19 +97,9 @@ stream(Data, Req, State) ->
         EncodedRespond = encode_wishes(TorrentId, NewWishes),
         {reply, EncodedRespond, Req, State};
 
-    <<"file_info">> ->
-        %% Load tracks list
-        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
-        FileId    = proplists:get_value(<<"file_id">>, DecodedData),
-        {ok, Req, State};
-
     _ -> 
         {reply, Data, Req, State}
     end.
-
-
-binary_to_existing_atom(X) ->
-    list_to_existing_atom(binary_to_list(X)).
 
 
 encode_wishes(TorrentId, Wishes) ->
@@ -130,7 +120,7 @@ encode_wish(TorrentId, X) ->
 
     case proplists:get_value('type', X) of
     'file' ->
-          [ {'name', etorrent_io:long_file_name(TorrentId, V)}
+          [ {'name', etorrent_info:long_file_name(TorrentId, V)}
           , {'value', V}
           , {'is_completed', C}
           , {'is_transient', T}
@@ -176,16 +166,8 @@ info({'log_event', Mess}=_Info, Req, State) ->
               ,{'data', Mess}
               ],
     EncodedRespond = jsx:term_to_json(Respond),
-    {reply, EncodedRespond, Req, State};
-
-info({'track_list', TorrentId, FileId, Props}=_Info, Req, State) ->
-    Respond = [ {'event', <<"tracksDataLoadCompleted">>} 
-              , {'data', [ {'torrent_id', TorrentId}
-                         , {'file_id', FileId}
-                         , {'rows', Props}]}
-              ],
-    EncodedRespond = jsx:term_to_json(Respond),
     {reply, EncodedRespond, Req, State}.
+
 
 
 terminate(_Req, _State) ->
@@ -198,3 +180,12 @@ terminate(_Req, _State) ->
 
 send(Pid, Mess) ->
     Pid ! Mess.
+
+
+
+binary_to_existing_atom(X) ->
+    list_to_existing_atom(binary_to_list(X)).
+
+
+atom_to_binary(X) ->
+    list_to_binary(atom_to_list(X)).
