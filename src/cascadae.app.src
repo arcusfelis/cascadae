@@ -1,4 +1,3 @@
-
 {application, cascadae, [
 	{description, "Server part of rhyacotriton application."},
 	{vsn, "0.1.0"},
