@@ -8,6 +8,7 @@ start() ->
 	application:start(crypto),
 	application:start(public_key),
 	application:start(ssl),
+	application:start(mimetypes),
 	application:start(cowboy),
 	application:start(jsx),
 	application:start(bullet),
