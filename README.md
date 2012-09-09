@@ -2,7 +2,7 @@ Another webui for etorrent.
 
 __License__: [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-__Author__: Uvarov Michael ([`cytozoon@gmail.com`](mailto:cytozoon@gmail.com))
+__Author__: Uvarov Michael ([`arcusfelis@gmail.com`](mailto:arcusfelis@gmail.com))
 
 
 Installation and building
@@ -18,7 +18,7 @@ Structure
 Cascadae - Erlang part of the program
 -------------------------------------
 
-http://github.com/cytozoon/cascadae 
+http://github.com/arcusfelis/cascadae 
 
 `priv/rhyacotriton` - symbolic link to the `build` directory of the 
 Rhyacotriton. The builded version does not require installation of qooxdoo.
@@ -29,10 +29,10 @@ Rhyacotriton - Javascript part of the program
 ---------------------------------------------
 
 Uses [qooxdoo](qooxdoo.org).
-Source code is [here](http://github.com/cytozoon/rhyacotriton).
+Source code is [here](http://github.com/arcusfelis/rhyacotriton).
 
 The builded version of the code is 
-[here](http://github.com/cytozoon/rhyacotriton-build).
+[here](http://github.com/arcusfelis/rhyacotriton-build).
 Don't edit it :) 
 Also, it is a submodule of cascadae.
 

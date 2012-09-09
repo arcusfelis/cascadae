@@ -1,6 +1,6 @@
 [submodule "priv/rhyacotriton"]
 	path = priv/rhyacotriton
-	url = git://github.com/cytozoon/rhyacotriton-build.git
+	url = git://github.com/arcusfelis/rhyacotriton-build.git
 [submodule "priv/jquery"]
 	path = priv/jquery
-	url = git://github.com/cytozoon/jquery-latest.git
+	url = git://github.com/arcusfelis/jquery-latest.git
