@@ -28,19 +28,17 @@ start(_Type, _Args) ->
 		{'_', [
 			{[<<"stream">>], bullet_handler, 
                     [{handler, cascadae_stream_handler}]},
+
 			{[], cascadae_default_handler, []},
-            cowboy_static:rule([
-                {dir, JQueryDir}, 
-                {prefix, "jquery"}, 
-                {sendfile, false}]),
-            cowboy_static:rule([
-                {dir, BulletDir}, 
-                {prefix, "bullet"}, 
-                {sendfile, false}]),
-            cowboy_static:rule([
-                {dir, BuildDir}, 
-                {prefix, ""}, 
-                {sendfile, false}])
+
+            {[<<"jquery">>, '...'], cowboy_http_static,
+                 [{directory, JQueryDir}]},
+
+            {[<<"bullet">>, '...'], cowboy_http_static,
+                 [{directory, BulletDir}]},
+
+            {['...'], cowboy_http_static,
+                 [{directory, BuildDir}]}
 		]}
 	],
 	cowboy:start_listener(cascadae_http, 100,
