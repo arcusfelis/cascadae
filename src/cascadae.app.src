@@ -4,16 +4,15 @@
 	{modules, []},
 	{registered, [cascadae_sup]},
 	{applications, [
-		kernel,
-		stdlib,
+		bullet,
+		cowboy,
 		crypto,
+		jsx,
+		kernel,
+		mimetypes,
 		public_key,
 		ssl,
-        mimetypes,
-		cowboy,
-        cowboy_static,
-        bullet,
-        jsx
+		stdlib
 	]},
     {mod, {cascadae, []}},
 	{env, []}

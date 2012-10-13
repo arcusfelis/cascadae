@@ -13,7 +13,6 @@ start() ->
 	application:start(jsx),
 	application:start(bullet),
 	application:start(sendfile),
-	application:start(cowboy_static),
 	application:start(cascadae).
 
 
