@@ -23,6 +23,7 @@ start(_Type, _Args) ->
     JQueryDir = abs_path(filename:join(
             [PrivDir, "jquery"])),
     BulletDir = abs_path(code:priv_dir(bullet)),
+    StaticFilesCfg = [{mimetypes, {fun mimetypes:path_to_mimes/2, default}}],
 
 	Dispatch = [
 		{'_', [
@@ -32,13 +33,13 @@ start(_Type, _Args) ->
 			{[], cascadae_default_handler, []},
 
             {[<<"jquery">>, '...'], cowboy_http_static,
-                 [{directory, JQueryDir}]},
+                 [{directory, JQueryDir}|StaticFilesCfg]},
 
             {[<<"bullet">>, '...'], cowboy_http_static,
-                 [{directory, BulletDir}]},
+                 [{directory, BulletDir}|StaticFilesCfg]},
 
             {['...'], cowboy_http_static,
-                 [{directory, BuildDir}]}
+                 [{directory, BuildDir}|StaticFilesCfg]}
 		]}
 	],
 	cowboy:start_listener(cascadae_http, 100,
