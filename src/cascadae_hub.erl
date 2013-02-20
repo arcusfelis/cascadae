@@ -340,10 +340,7 @@ to_record(X) ->
 %% @doc Sort a list by id.
 -spec sort_records([#torrent{}]) -> [#torrent{}].
 sort_records(List) ->
-    ComparatorFn = fun(X, Y) ->
-            X#torrent.id < Y#torrent.id
-        end,
-    lists:sort(ComparatorFn, List).
+    lists:keysort(#torrent.id, List).
 
 
 calc_speed_records(Olds, News, Tick) ->
