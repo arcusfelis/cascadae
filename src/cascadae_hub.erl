@@ -39,17 +39,18 @@
 
 -record(torrent, {
     'id'         :: torrent_id(),
-    'left'       :: integer(),
-    'leechers'   :: integer(),
-    'seeders'    :: integer(),
-    'all_time_downloaded' :: integer(),
-    'all_time_uploaded'   :: integer(),
-    'downloaded' :: integer(),
-    'uploaded'   :: integer(),
+    'wanted'     :: non_neg_integer(),
+    'left'       :: non_neg_integer(),
+    'leechers'   :: non_neg_integer(),
+    'seeders'    :: non_neg_integer(),
+    'all_time_downloaded' :: non_neg_integer(),
+    'all_time_uploaded'   :: non_neg_integer(),
+    'downloaded' :: non_neg_integer(),
+    'uploaded'   :: non_neg_integer(),
     'state'      :: atom(),
 
-    'speed_in'  = 0 :: integer(),
-    'speed_out' = 0 :: integer()
+    'speed_in'  = 0 :: non_neg_integer(),
+    'speed_out' = 0 :: non_neg_integer()
 }).
 
 
@@ -301,6 +302,7 @@ form_json_proplist_fn() ->
         [{'id',         Id}
         ,{'name',       list_to_binary(Name)}
         ,{'total',      proplists:get_value('total', X)}
+        ,{'wanted',     proplists:get_value('wanted', X)}
         ,{'left',       proplists:get_value('left', X)}
         ,{'online',     IsOnline}
         ,{'leechers',   proplists:get_value('leechers', X)}
@@ -327,6 +329,7 @@ to_record(X) ->
     #torrent{
         id       = proplists:get_value('id', X),
         left     = proplists:get_value('left', X),
+        wanted   = proplists:get_value('wanted', X),
         leechers = proplists:get_value('leechers', X),
         seeders  = proplists:get_value('seeders', X),
         state    = proplists:get_value('state', X),
@@ -452,8 +455,8 @@ diff_records([],
 diff_element(Old=#torrent{left=ORem, leechers=OLs, seeders=OSs},
              New=#torrent{left=NRem, leechers=NLs, seeders=NSs}) ->
 
-    #torrent{uploaded=OU, downloaded=OD, state=OS}=Old,
-    #torrent{uploaded=NU, downloaded=ND, state=NS}=New,
+    #torrent{wanted=OW, uploaded=OU, downloaded=OD, state=OS}=Old,
+    #torrent{wanted=NW, uploaded=NU, downloaded=ND, state=NS}=New,
     #torrent{all_time_uploaded=OATU, all_time_downloaded=OATD}=Old,
     #torrent{all_time_uploaded=NATU, all_time_downloaded=NATD}=New,
     #torrent{speed_in=OSI, speed_out=OSO}=Old,
@@ -463,6 +466,10 @@ diff_element(Old=#torrent{left=ORem, leechers=OLs, seeders=OSs},
     [case NRem of
      ORem -> 'not_modified';
      X    -> {'left', X}
+     end
+    ,case NW of
+     OW   -> 'not_modified';
+     X    -> {'wanted', X}
      end
     ,case NLs of
      OLs  -> 'not_modified';

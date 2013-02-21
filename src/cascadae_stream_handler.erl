@@ -86,16 +86,27 @@ stream(Data, Req, State) ->
                     || {K, V} <- X, K =/= <<"name">>] || X <- List],
         error_logger:info_msg("Set new wishes ~p for torrent ~B.",
             [Wishes, TorrentId]),
-        {ok, Wishes1} = etorrent_torrent_ctl:set_wishes(TorrentId, Wishes),
+        {ok, _Wishes1} = etorrent_torrent_ctl:set_wishes(TorrentId, Wishes),
         {ok, Req, State};
 
     <<"wish_files">> ->
         TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
         Fids      = proplists:get_value(<<"file_ids">>, DecodedData),
         {ok, NewWishes} = etorrent_torrent_ctl:wish_file(TorrentId, Fids),
-        
         EncodedRespond = encode_wishes(TorrentId, NewWishes),
         {reply, EncodedRespond, Req, State};
+
+    <<"skip_files">> ->
+        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
+        Fids      = proplists:get_value(<<"file_ids">>, DecodedData),
+        ok        = etorrent_torrent_ctl:skip_file(TorrentId, Fids),
+        {ok, Req, State};
+
+    <<"unskip_file">> ->
+        TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
+        Fids      = proplists:get_value(<<"file_ids">>, DecodedData),
+        ok        = etorrent_torrent_ctl:unskip_file(TorrentId, Fids),
+        {ok, Req, State};
 
     _ -> 
         {reply, Data, Req, State}
