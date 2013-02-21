@@ -10,3 +10,4 @@ priv/rhyacotriton
 *.dll
 .eunit
 doc/README.md
+log/

@@ -24,33 +24,26 @@ start(_Type, _Args) ->
     BulletDir = abs_path(code:priv_dir(bullet)),
     StaticFilesCfg = [{mimetypes, {fun mimetypes:path_to_mimes/2, default}}],
 
-	Dispatch = [
+    Dispatch = cowboy_router:compile([
 		{'_', [
-			{[<<"stream">>], bullet_handler, 
+			{"/stream", bullet_handler, 
                     [{handler, cascadae_stream_handler}]},
 
-			{[], cascadae_default_handler, []},
+			{"/", cascadae_default_handler, []},
 
-            {[<<"jquery">>, '...'], cowboy_http_static,
+            {"/jquery/[...]", cowboy_static,
                  [{directory, JQueryDir}|StaticFilesCfg]},
 
-            {[<<"bullet">>, '...'], cowboy_http_static,
+            {"/bullet/[...]", cowboy_static,
                  [{directory, BulletDir}|StaticFilesCfg]},
 
-            {['...'], cowboy_http_static,
+            {"/[...]", cowboy_static,
                  [{directory, BuildDir}|StaticFilesCfg]}
 		]}
-	],
-	cowboy:start_listener(cascadae_http, 100,
-		cowboy_tcp_transport, [{port, 1080}],
-		cowboy_http_protocol, [{dispatch, Dispatch}]
-	),
-%   cowboy:start_listener(https, 100,
-%   	cowboy_ssl_transport, [
-%   		{port, 1443}, {certfile, "priv/ssl/cert.pem"},
-%   		{keyfile, "priv/ssl/key.pem"}, {password, "cowboy"}],
-%   	cowboy_http_protocol, [{dispatch, Dispatch}]
-%   ),
+    ]),
+    {ok, _} = cowboy:start_http(cascadae_http, 100, [{port, 1080}], [
+                    {env, [{dispatch, Dispatch}]}
+                ]),
 	cascadae_sup:start_link().
 
 stop(_State) ->
