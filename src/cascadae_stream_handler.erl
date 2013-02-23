@@ -33,6 +33,7 @@ stream(<<"all_peers">> = _Data, Req, State) ->
 
 stream(Data, Req, State) ->
     DecodedData = jsx:json_to_term(Data),
+    lager:debug("Event: ~p", [DecodedData]),
     case proplists:get_value(<<"event">>, DecodedData) of
     <<"remove">> -> 
         Id = proplists:get_value(<<"id">>, DecodedData),
@@ -102,7 +103,7 @@ stream(Data, Req, State) ->
         ok        = etorrent_torrent_ctl:skip_file(TorrentId, Fids),
         {ok, Req, State};
 
-    <<"unskip_file">> ->
+    <<"unskip_files">> ->
         TorrentId = proplists:get_value(<<"torrent_id">>, DecodedData),
         Fids      = proplists:get_value(<<"file_ids">>, DecodedData),
         ok        = etorrent_torrent_ctl:unskip_file(TorrentId, Fids),
