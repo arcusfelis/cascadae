@@ -35,6 +35,21 @@ stream(Data, Req, State) ->
     DecodedData = jsx:json_to_term(Data),
     lager:debug("Event: ~p", [DecodedData]),
     case proplists:get_value(<<"event">>, DecodedData) of
+    <<"add_torrent">> -> 
+        Address = proplists:get_value(<<"address">>, DecodedData),
+        Paused  = proplists:get_value(<<"paused">>, DecodedData),
+        IsPaused = if Paused -> true; true -> false end,
+        [lager:debug("Add ~p on pause.", [Address]) || IsPaused],
+        proc_lib:spawn(fun() ->
+            {ok, FileName} = etorrent_magnet:download({address, Address}),
+            case etorrent_ctl:start(FileName, [{paused, IsPaused}]) of
+                {ok, TorrentID} ->
+                    lager:info("Start torrent #~p from ~p from browser.",
+                               [TorrentID, FileName])
+            end
+            end),
+        {ok, Req, State};
+
     <<"remove">> -> 
         Id = proplists:get_value(<<"id">>, DecodedData),
         true = is_number(Id),
@@ -199,5 +214,3 @@ binary_to_existing_atom(X) ->
     list_to_existing_atom(binary_to_list(X)).
 
 
-atom_to_binary(X) ->
-    list_to_binary(atom_to_list(X)).

@@ -73,7 +73,7 @@
 
 -record(state, {
     timer :: reference(),
-    torrents :: [#torrent{}],
+    torrents :: [#torrent{}] | undefined,
     handlers = [] :: [pid()],
     tick :: integer()
 }).
@@ -211,12 +211,16 @@ active('update', SD=#state{
 % Another client was connected.
 active('add_handler', {Pid, _Tag}, SD=#state{handlers=Hs}) ->
     lager:info("Add the client on ~w.", [Pid]),
-
-    % Registration of the client
-    erlang:monitor(process, Pid),
-    Hs1 = Hs -- [Pid],
-    SD1 = SD#state{handlers=[Pid|Hs1]},
-    {reply, ok, active, SD1}.
+    case lists:member(Pid, Hs) of
+        true ->
+            lager:error("Cannot add a handler twice for the same process ~p.", [Pid]),
+            {reply, ok, active, SD};
+        false ->
+            % Registration of the client
+            erlang:monitor(process, Pid),
+            SD1 = SD#state{handlers=[Pid|Hs]},
+            {reply, ok, active, SD1}
+    end.
 
 
 
@@ -293,6 +297,10 @@ form_json_proplist_fn() ->
         %% Data from tracking_map (etorrent_table)
         PL = get_torrent(Id),
         Name = proplists:get_value('filename', PL),
+        Hash = case proplists:get_value('info_hash', PL) of
+                unknown -> <<>>;
+                <<InfoHashInt:160>> -> integer_hash_to_literal(InfoHashInt)
+            end,
 
         IsOnline = case proplists:get_value('state', PL) of
                 'started' -> true;
@@ -301,6 +309,7 @@ form_json_proplist_fn() ->
 
         [{'id',         Id}
         ,{'name',       list_to_binary(Name)}
+        ,{'display_name', proplists:get_value('display_name', X)}
         ,{'total',      proplists:get_value('total', X)}
         ,{'wanted',     proplists:get_value('wanted', X)}
         ,{'left',       proplists:get_value('left', X)}
@@ -315,6 +324,7 @@ form_json_proplist_fn() ->
         ,{'all_time_uploaded',  
                         proplists:get_value('all_time_uploaded', X)}
         ,{'pid',        to_binary(etorrent_torrent_ctl:lookup_server(Id))}
+        ,{'info_hash',  Hash}
         ]
     end.
 
@@ -567,3 +577,7 @@ sort_records_test_() ->
     ].
 
 -endif.
+
+
+integer_hash_to_literal(InfoHashInt) when is_integer(InfoHashInt) ->
+    iolist_to_binary(io_lib:format("~40.16.0B", [InfoHashInt])).
