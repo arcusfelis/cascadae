@@ -155,7 +155,7 @@ encode_wish(TorrentId, X) ->
           ];
 
     'piece' ->
-          Name = unicode:characters_to_binary(io_lib:format("~w", [V])),
+          Name = iolist_to_binary(io_lib:format("~w", [V])),
           [ {'name', Name}
           , {'value', V}
           , {'is_completed', C}
