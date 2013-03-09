@@ -6,6 +6,6 @@ exec erl -pa $PWD/ebin edit $PWD/deps/*/ebin \
     -boot start_sasl \
     -sname etorrent \
     -s etorrent_app \
-    -s cascadae \
+    -s cascadae_app \
     -config ~/.config/etorrent
 

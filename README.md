@@ -43,3 +43,9 @@ Etorrent bittorrent client
 
 http://github.com/jlouis/etorrent  
 
+
+Event prefixes
+--------------
+
+* r - the event called remotelly (from Erlang);
+* d - data event.

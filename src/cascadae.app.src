@@ -4,8 +4,8 @@
 	{modules, []},
 	{registered, [cascadae_sup]},
 	{applications, [
-		bullet,
 		cowboy,
+        socketio,
 		crypto,
 		jsx,
 		kernel,
@@ -14,6 +14,6 @@
 		ssl,
 		stdlib
 	]},
-    {mod, {cascadae, []}},
+    {mod, {cascadae_app, []}},
 	{env, []}
 ]}.

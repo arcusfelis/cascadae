@@ -1,0 +1,2 @@
+# Force binary mode
+priv/socket.io-client/socket.io.min.js -crlf

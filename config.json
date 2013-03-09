@@ -1,0 +1,150 @@
+{
+  "name"    : "cascadae",
+
+  "include" :
+  [
+    {
+      "path" : "${QOOXDOO_PATH}/tool/data/config/application.json"
+    }
+  ],
+
+  "export" :
+  [
+    "api",
+    "api-data",
+    "build",
+    "clean",
+    "distclean",
+    "fix",
+    "info",
+    "inspector",
+    "lint",
+    "migration",
+    "pretty",
+    "profiling",
+    "source",
+    "source-all",
+    "source-hybrid",    
+    "simulation-build",
+    "simulation-run",
+    "test",
+    "test-source",
+    "translation"
+  ],
+  
+  "default-job" : "source-hybrid",
+
+  "let" :
+  {
+    "APPLICATION"  : "cascadae",
+    "QOOXDOO_PATH" : "q_deps/qooxdoo",
+    "QXTHEME"      : "qx.theme.Modern",
+    "API_EXCLUDE"  : ["qx.test.*", "${APPLICATION}.theme.*", 
+        "${APPLICATION}.test.*", "${APPLICATION}.simulation.*"],
+    "LOCALES"      : [ "en" ],
+    "CACHE"        : "cache",
+    "ROOT"         : "."
+  },
+
+  // You only need to edit the remainder of this file, if you want to customize
+  // specific jobs, or add own job definitions.
+
+  "jobs" :
+  {
+    // Uncomment the following entry to add a contrib or library to your
+    // project; make sure to adapt the path to the Manifest.json; if you are
+    // using a contrib: library, it will be downloaded into the path specified
+    // by the 'cache/downloads' config key
+      
+    "libraries" : 
+    {
+      "library" :
+      [
+        {
+          "manifest" : "contrib://SmartTableModel/trunk/Manifest.json"
+        }
+      ]
+    },
+
+    "cache" :
+    {
+      "cache" :
+      {
+        "compile"   : "q_bin",
+        "downloads" : "q_deps"
+      }
+    },
+
+    "source" :
+    {
+      "compile-options" :
+      {
+        "paths" :
+        {
+          "file"            : "priv/html/script/cascadae.js",
+          "app-root"        : "q_src",
+          "gzip"            : false
+        },
+        "uris" :
+        {
+          "script"          : "script",
+          "resource"        : "resource"
+        },
+        "code" :
+        {
+          "format"          : true,
+          "optimize"        : []
+        }
+      }
+	},
+
+    "source-hybrid" :
+    {
+      "compile-options" :
+      {
+        "paths" :
+        {
+          "file"            : "priv/html/script/cascadae.js",
+          "app-root"        : "q_src",
+          "gzip"            : false
+        },
+        "uris" :
+        {
+          "script"          : "script",
+          "resource"        : "resource"
+        },
+        "code" :
+        {
+          "format"          : true,
+          "optimize"        : []
+        }
+      }
+	},
+
+    "build" :
+    {
+      "compile-options" :
+      {
+        "paths" :
+        {
+          "file"            : "priv/html/script/cascadae.js",
+          "app-root"        : "q_src",
+          "gzip"            : false
+        },
+        "uris" :
+        {
+          "script"          : "script",
+          "resource"        : "resource"
+        },
+        "code" :
+        {
+          "format"          : false,
+          "optimize"        : ["basecalls", "comments", "privates", 
+          					 "strings", "variables", "variants"]
+        }
+      }
+    }
+
+
+  }
+}

@@ -1,8 +1,7 @@
-%% Feel free to use, reuse and abuse the code in this file.
-
--module(cascadae).
+-module(cascadae_app).
 -behaviour(application).
 -export([start/0, start/2, stop/1]).
+-define(APP, cascadae).
 
 start() ->
 	application:start(crypto),
@@ -11,31 +10,40 @@ start() ->
 	application:start(mimetypes),
 	application:start(cowboy),
 	application:start(jsx),
-	application:start(bullet),
+	application:start(socketio),
 	application:start(cascadae).
 
 
 start(_Type, _Args) ->
-    PrivDir = code:priv_dir(cascadae),
-    BuildDir = abs_path(filename:join(
-            [PrivDir, "rhyacotriton"])),
-    JQueryDir = abs_path(filename:join(
-            [PrivDir, "jquery"])),
-    BulletDir = abs_path(code:priv_dir(bullet)),
+    PrivDir     = code:priv_dir(?APP),
+    BuildDir    = abs_path(filename:join([PrivDir, "html"])),
+    SIODir      = abs_path(filename:join([PrivDir, "socket.io-client"])),
+    QDepsDir    = abs_path(code:lib_dir(?APP, q_deps)),
+    QSrcDir     = abs_path(code:lib_dir(?APP, q_src)),
     StaticFilesCfg = [{mimetypes, {fun mimetypes:path_to_mimes/2, default}}],
+    SIOConfig = socketio_session:configure([
+            {heartbeat, 5000},
+            {session_timeout, 30000},
+            {callback, cascadae_session},
+            {protocol, socketio_data_protocol}]),
 
     Dispatch = cowboy_router:compile([
 		{'_', [
-			{"/stream", bullet_handler, 
-                    [{handler, cascadae_stream_handler}]},
-
 			{"/", cascadae_default_handler, []},
 
-            {"/jquery/[...]", cowboy_static,
-                 [{directory, JQueryDir}|StaticFilesCfg]},
+            {"/socket.io/1/[...]", socketio_handler, [SIOConfig]},
 
-            {"/bullet/[...]", cowboy_static,
-                 [{directory, BulletDir}|StaticFilesCfg]},
+            {"/q_deps/[...]", cowboy_static,
+                 [{directory, QDepsDir}|StaticFilesCfg]},
+
+            {"/q_src/[...]", cowboy_static,
+                 [{directory, QSrcDir}|StaticFilesCfg]},
+
+            {"/priv/html/[...]", cowboy_static,
+                 [{directory, BuildDir}|StaticFilesCfg]},
+
+            {"/socket.io-client/[...]", cowboy_static,
+                 [{directory, SIODir}|StaticFilesCfg]},
 
             {"/[...]", cowboy_static,
                  [{directory, BuildDir}|StaticFilesCfg]}
