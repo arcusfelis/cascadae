@@ -421,13 +421,50 @@ qx.Class.define("cascadae.BasicTable",
 
   events :
   {
+    // Data changed
     "tableRefreshed" : "qx.event.type.Event",
 
     // Remote events
     "rd_dataAdded"         : "qx.event.type.Data",
+
+    /**
+     * Dispatched after a respond is trasmitted from server.
+     *
+     * The data is a map containing this properties:
+     * <ul>
+     *   <li>rows (of ids)</li>
+     * </ul>
+     */
     "rd_dataRemoved"       : "qx.event.type.Data",
+
+    /**
+     * Dispatched after a respond is trasmitted from server.
+     *
+     * The data is a map containing this properties:
+     * <ul>
+     *   <li>id</li>
+     * </ul>
+     */
     "rd_dataRemoveFailure" : "qx.event.type.Data",
+
+    /**
+     * Load a full set of data from server.
+     *
+     * The data is a map containing this properties:
+     * <ul>
+     *   <li>rows</li>
+     * </ul>
+     */
     "rd_dataLoadCompleted" : "qx.event.type.Data",
+
+    /**
+     * Dispatched after a respond is trasmitted from server.
+     *
+     * The data is a map containing this properties:
+     * <ul>
+     *   <li>rows : [{id, ...}]</li>
+     * </ul>
+     */
     "rd_dataUpdated"       : "qx.event.type.Data"
   }
 });
