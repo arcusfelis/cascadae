@@ -6,7 +6,7 @@
 %% ------------------------------------------------------------------
 
 -export([start_link/0]).
--export([all_torrents/0, 
+-export([all_torrents/0,
         add_handler/0,
         fire_event/1]).
 
@@ -14,9 +14,9 @@
 %% gen_fsm Function Exports
 %% ------------------------------------------------------------------
 
--export([init/1, 
-        handle_info/3, 
-        terminate/3, 
+-export([init/1,
+        handle_info/3,
+        terminate/3,
         code_change/4,
 
         active/2,
@@ -25,7 +25,7 @@
         await/3]).
 
 
--define(HANDLER_MODULE, cascadae_stream_handler).
+-define(HANDLER_MODULE, cascadae_session).
 -define(SERVER, ?MODULE).
 
 -type torrent_id() :: integer().
@@ -176,7 +176,7 @@ active('update', SD=#state{
     case Diff of
     [] -> 'skip';
     _  -> 
-        SendFn({'diff_list', Diff})
+        SendFn({torrents, {'diff_list', Diff}})
     end,
 
     case Added of
@@ -193,13 +193,13 @@ active('update', SD=#state{
                 Fn(PL)
                 end, Added),
 
-        SendFn({'add_list', AddedJSON})
+        SendFn({torrents, {'add_list', AddedJSON}})
     end,
 
     case Deleted of
     [] -> 'skip';
     _  -> 
-        SendFn({'delete_list', Deleted})
+        SendFn({torrents, {'delete_list', Deleted}})
     end,
 
     % Run timer again

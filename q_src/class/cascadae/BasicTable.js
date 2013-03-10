@@ -295,13 +295,9 @@ qx.Class.define("cascadae.BasicTable",
       try
       {
         this.__tableModel.removeRows(
-
         /* startIndex */ 0,
-
         /* howMany */ undefined,
-
         /* view */ undefined,
-
         /* fireEvent */ false);
       }
       catch(err)
@@ -309,7 +305,7 @@ qx.Class.define("cascadae.BasicTable",
         this.debug("Is the table empty?");
       }
 
-      this.addRows(data.rows);
+      if (data.rows.length) this.addRows(data.rows);
     },
 
 

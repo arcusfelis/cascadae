@@ -210,14 +210,16 @@ qx.Class.define("cascadae.wishlist.List",
       // is visable
       this.__active = bActive;
       if (bActive) 
-        this.refresh();
+        this.updateData();
     },
 
     /* Load new data from the server */
     updateData : function()
     {
       this.removeAll();
-      this.fireDataEvent("d_wishesRequest", {torrent_id: this.getTorrentId()});
+      var tid = this.getTorrentId();
+      if (tid == null) return;
+      this.fireDataEvent("d_wishesRequest", {torrent_id: tid});
     },
 
     // Get data for sending on a server

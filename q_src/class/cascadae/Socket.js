@@ -153,19 +153,21 @@ qx.Class.define("cascadae.Socket", {
     __addListenerFromErlang: function(eventName, objHash)
     {
       var item = qx.core.ObjectRegistry.fromHashCode(objHash);
-      item.addListener(event.type, this.__listener, this);
+      item.addListener(eventName, this.__listener, this);
     },
 
     __fireEventFromErlang: function(eventName, objHash)
     {
       var item = qx.core.ObjectRegistry.fromHashCode(objHash);
-      item.fireEvent(event.type);
+      item.fireEvent(eventName);
     },
 
     __fireDataEventFromErlang: function(eventName, objHash, eventData)
     {
+      this.info("fireDataEvent ", eventName);
+      console.dir(eventData);
       var item = qx.core.ObjectRegistry.fromHashCode(objHash);
-      item.fireDataEvent(event.type, eventData);
+      item.fireDataEvent(eventName, eventData);
     },
 
 
@@ -173,15 +175,15 @@ qx.Class.define("cascadae.Socket", {
     __listener : function(e)
     {
       var item = e.getTarget();
-      var data = {};
-      data.hash = item.toHashCode();
-      switch (event.classname)
+      var meta = {};
+      meta.hash = item.toHashCode();
+      switch (e.classname)
       {
         case "qx.event.type.Data":
-          data = event.getData();
+          meta.data = e.getData();
           break;
       }
-      this.emit(e.getType(), data);
+      this.emit(e.getType(), meta);
     },
 
 

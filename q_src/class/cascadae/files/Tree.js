@@ -577,7 +577,7 @@ qx.Class.define("cascadae.files.Tree",
       if (typeof(this.__openSids[tid]) == "undefined") {
         this.__openSids[tid] = [0];
       }
-      this.getFileTreeNode(tid, this.__openSids[tid]);
+      if (tid !== null) this.getFileTreeNode(tid, this.__openSids[tid]);
     },
 
     _applyTorrentId: function(value, old, name)
