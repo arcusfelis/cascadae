@@ -18,5 +18,4 @@ start_link() ->
 
 init([]) ->
     Hub = ?CHILD(cascadae_hub, worker),
-    SessionSup = ?CHILD(cascadae_session_sup, supervisor),
-	{ok, {{one_for_one, 10, 10}, [Hub, SessionSup]}}.
+	{ok, {{one_for_one, 10, 10}, [Hub]}}.

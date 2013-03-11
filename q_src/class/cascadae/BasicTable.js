@@ -417,7 +417,7 @@ qx.Class.define("cascadae.BasicTable",
 
   events :
   {
-    // Data changed
+    // Data in the table model was changed
     "tableRefreshed" : "qx.event.type.Event",
 
     // Remote events

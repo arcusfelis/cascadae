@@ -14,8 +14,11 @@ qx.Class.define("cascadae.files.Tree",
 
   events :
   {
+    "activated"          : "qx.event.type.Event",
+    "deactivated"        : "qx.event.type.Event",
     "d_childrenRequest"  : "qx.event.type.Data",
     "rd_childrenRespond" : "qx.event.type.Data",
+    "rd_dataUpdated"     : "qx.event.type.Data",
     "d_wishFiles"        : "qx.event.type.Data",
     "d_skipFiles"        : "qx.event.type.Data",
     "d_unskipFiles"      : "qx.event.type.Data"
@@ -57,7 +60,7 @@ qx.Class.define("cascadae.files.Tree",
     }
     delete i;
     
-    var custom = {dataModel: new cascadae.files.Model(this)};
+    var custom = {dataModel: new cascadae.files.Model()};
     this.base(arguments, captions, custom);
     // Highlighting of the focused rows is pretty slow.
     // Disable it.
@@ -98,6 +101,7 @@ qx.Class.define("cascadae.files.Tree",
     this.addListener("treeOpenWithContent", this.onTreeOpen, this);
     this.addListener("treeClose", this.onTreeClose, this);
     this.addListener("rd_childrenRespond", this.onDataLoad, this);
+    this.addListener("rd_dataUpdated", this.onDataUpdated, this);
     
     this.setAlwaysShowOpenCloseSymbol(true);
     this.__preloadImages();
@@ -111,6 +115,9 @@ qx.Class.define("cascadae.files.Tree",
     __openSids : [],
     __dirSids : [],
     __active : false,
+    // If true, than the data must be reloaded, when the table will be active
+    // again.
+    __dirty : false,
 
     _onKeyPress : function(e)
     {
@@ -255,8 +262,10 @@ qx.Class.define("cascadae.files.Tree",
     setActive : function(bActive) {
       // is visable
       this.__active = bActive;
-      if (bActive) 
+      if (bActive && this.__dirty) 
         this.updateData();
+      this.__dirty = false;
+      this.fireEvent(this.__active ? "activated" : "deactivated");
     },
 
 
@@ -345,6 +354,27 @@ qx.Class.define("cascadae.files.Tree",
       dm.setData();
     },
 
+    onDataUpdated : function(e)
+    {
+      var dm = this.getDataModel(),
+          data = e.getData(),
+          tid = data.torrent_id,
+          n2p = this.__n2p;
+      if (this.getTorrentId() != tid)
+        return;
+      for (var plen = data.nodes.length, i = 0; i<plen; i++) 
+      {
+        // node is {id, progress}
+        var node = data.nodes[i];
+        var nodeId  = this.__sid2nid[node.id];
+        // row is not found.
+        if (nodeId == undefined) continue;
+        var rowIndex = dm.getRowFromNodeId(nodeId);
+        // setValue(Integer columnIndex, Integer rowIndex, var value);
+        if (node.progress !== undefined)
+            dm.setValue(n2p.progress, rowIndex, node.progress);
+      }
+    },
 
     /* Map is from server */
     __mapToRow : function(map)
@@ -562,12 +592,36 @@ qx.Class.define("cascadae.files.Tree",
       }
     },
 
-    
-    sortHandler : function()
+    // rows is a map from sid to columndata.
+    // protected -- called from the model.
+    //
+    // psid2rows will be changed in this function.
+    setRowsBulk : function(psid2rows)
     {
-      var dm = this.getDataModel();  
-      this.updateData();
-      dm.sortCompleted();               
+      var tid = this.getTorrentId(),
+           dm = this.getDataModel();
+      var dirSids = this.__dirSids;
+      this.__clearState();
+      this.__dirSids = dirSids;
+      // this.__openSids[tid] is the same.
+
+      for (parent_sid in psid2rows)
+      {
+        var rows = psid2rows[parent_sid];
+        dm.sortRows(rows);
+
+        // Add children to the model
+        this.addRows(tid, parent_sid, rows); 
+      }
+
+      // update data in the table 
+      dm.setData();
+    },
+
+    _applyTorrentId: function(value, old, name)
+    {
+      if (this.__active) this.updateData();
+      else this.__dirty = true;
     },
 
     updateData : function()
@@ -580,9 +634,9 @@ qx.Class.define("cascadae.files.Tree",
       if (tid !== null) this.getFileTreeNode(tid, this.__openSids[tid]);
     },
 
-    _applyTorrentId: function(value, old, name)
+    getNodeToServerIdIndex: function()
     {
-      if (this.__active) this.updateData();
+        return this.__nid2sid;
     }
   }
 });
