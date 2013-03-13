@@ -99,13 +99,8 @@ qx.Class.define("cascadae.Socket", {
     /**
      * Trying to using socket.io to connect and plug every event from socket.io to qooxdoo one
      */
-   connect: function()
-   {
-      if(this.getSocket() != null)
-      {
-        this.getSocket().removeAllListeners();
-        this.getSocket().disconnect();
-      }
+    connect: function()
+    {
       var address = this.getUrl() + this.getNamespace();
       this.info("Connect to " + address);
       var socket = io.connect(address, {
@@ -113,8 +108,8 @@ qx.Class.define("cascadae.Socket", {
         'reconnect': this.getReconnect(),
         'connect timeout' : this.getConnectTimeout(),
         'reconnection delay': this.getReconnectionDelay(),
-        'max reconnection attempts': this.getMaxReconnectionAttemps(),
-        'force new connection': true
+        'max reconnection attempts': this.getMaxReconnectionAttemps()
+//      'force new connection': true
       })
       this.setSocket(socket);
       var self = this;
@@ -139,15 +134,15 @@ qx.Class.define("cascadae.Socket", {
 
       socket.on("addListener", function(e) {
         self.__addListenerFromErlang(e.name, e.hash);
-     });
+      });
 
       socket.on("fireEvent", function(e) {
         self.__fireEventFromErlang(e.name, e.hash);
-     });
+      });
 
       socket.on("fireDataEvent", function(e) {
         self.__fireDataEventFromErlang(e.name, e.hash, e.data);
-     });
+      });
     },
 
     __addListenerFromErlang: function(eventName, objHash)
@@ -214,10 +209,32 @@ qx.Class.define("cascadae.Socket", {
 
     reconnect : function()
     {
+      this.__destroySocket();
+      this.connect();
     },
 
     reload : function()
     {
+    },
+
+    __destroySocket: function()
+    {
+      var socket = this.getSocket();
+      if(socket != null)
+      {
+        this.removeAllBindings();
+ 
+        //Disconnecting socket.io
+        socket.disconnect();
+        ["connect", "connect_failed", "disconnect", "reconnect_failed",
+         "connecting", "message", "close", "reconnect", "reconnecting", "error",
+ 
+         "rd_logEvent"]
+        .map(function(eventName) {
+          socket.removeAllListeners(eventName);
+        });
+        this.setSocket(null);
+      }
     }
   },
 
@@ -226,20 +243,6 @@ qx.Class.define("cascadae.Socket", {
    */
   destruct : function()
   {
-    var socket = this.getSocket();
-    if(socket != null)
-    {
-      this.removeAllBindings();
-
-      //Disconnecting socket.io
-      socket.disconnect();
-      ["connect", "connect_failed", "disconnect", "reconnect_failed",
-       "connecting", "message", "close", "reconnect", "reconnecting", "error",
-
-       "rd_logEvent"]
-      .map(function(eventName) {
-        socket.removeAllListeners(eventName);
-      });
-    }
+    this.__destroySocket();
   }
 });

@@ -104,7 +104,8 @@ qx.Class.define("cascadae.files.Tree",
     this.addListener("rd_dataUpdated", this.onDataUpdated, this);
     
     this.setAlwaysShowOpenCloseSymbol(true);
-    this.__preloadImages();
+    // delay preloading
+    qx.event.Timer.once(this.__preloadImages, this, 3000);
   },
 
   members : {
@@ -210,14 +211,14 @@ qx.Class.define("cascadae.files.Tree",
     
     __preloadImages : function()
     {
-      var ImageLoader = qx.io.ImageLoader;
+      var il = qx.io.ImageLoader;
 
       var am = qx.util.AliasManager.getInstance();
       var rm = qx.util.ResourceManager.getInstance();
 
       var loadImage = function(f)
       {
-        ImageLoader.load(rm.toUri(am.resolve(f)));
+        il.load(rm.toUri(am.resolve(f)));
       };
 
       loadImage("cascadae/icon/16/files/folder-open-partical.png");
@@ -227,6 +228,7 @@ qx.Class.define("cascadae.files.Tree",
       loadImage("cascadae/icon/16/files/office-skipped.png");
       loadImage("icon/16/mimetypes/office-document.png");
       loadImage("icon/16/places/folder.png");
+      loadImage("icon/16/places/folder-open.png");
     },
 
 
@@ -605,7 +607,7 @@ qx.Class.define("cascadae.files.Tree",
       this.__dirSids = dirSids;
       // this.__openSids[tid] is the same.
 
-      for (parent_sid in psid2rows)
+      for (var parent_sid in psid2rows)
       {
         var rows = psid2rows[parent_sid];
         dm.sortRows(rows);

@@ -95,7 +95,13 @@
           "format"          : true,
           "optimize"        : []
         }
-      }
+      },
+      "add-script" :
+      [
+        {
+          "uri" : "socket.io-client/socket.io.js"
+        }
+      ]
 	},
 
     "source-hybrid" :
@@ -118,7 +124,13 @@
           "format"          : true,
           "optimize"        : []
         }
-      }
+      },
+      "add-script" :
+      [
+        {
+          "uri" : "socket.io-client/socket.io.js"
+        }
+      ]
 	},
 
     "build" :
@@ -142,7 +154,13 @@
           "optimize"        : ["basecalls", "comments", "privates", 
           					 "strings", "variables", "variants"]
         }
-      }
+      },
+      "add-script" :
+      [
+        {
+          "uri" : "socket.io-client/socket.io.min.js"
+        }
+      ]
     }
 
 

@@ -20,7 +20,8 @@ start(_Type, _Args) ->
     SIODir      = abs_path(filename:join([PrivDir, "socket.io-client"])),
     QDepsDir    = abs_path(code:lib_dir(?APP, q_deps)),
     QSrcDir     = abs_path(code:lib_dir(?APP, q_src)),
-    StaticFilesCfg = [{mimetypes, {fun mimetypes:path_to_mimes/2, default}}],
+    StaticFilesCfg = [{mimetypes, {fun mimetypes:path_to_mimes/2, default}},
+                      {etag, {attributes, [filepath, filesize, inode, mtime]}}],
     SIOConfig = socketio_session:configure([
             {heartbeat, 5000},
             {session_timeout, 30000},

@@ -87,7 +87,8 @@ qx.Class.define("cascadae.Container",
       var container = this;
 
       // Do heavy calculations in idle time
-      setTimeout(function() { container._initViews(); }, 3000);
+      // document.setTimeout
+      qx.event.Timer.once(container._initViews, container, 3000);
     },
 
     _initViews : function()
@@ -380,6 +381,7 @@ qx.Class.define("cascadae.Container",
     {
       var isFileViewEnabled = false;
       var isWishViewEnabled = false;
+      this.info("Select view " + show);
 
       switch(show)
       {

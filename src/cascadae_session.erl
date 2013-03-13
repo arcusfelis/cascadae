@@ -2,7 +2,7 @@
 -export([send/2]).
 -export([open/3, recv/4, handle_info/4, close/3]).
 
--record(session_state, {
+-record(sess_state, {
     %% Hash of the cascadae.Table object.
     torrent_table_hash,
     %% Hash of the cascadae.wishlist.List object.
@@ -30,19 +30,19 @@ open(Pid, Sid, _Opts) ->
     ?HUB:add_handler(),
     error_logger:info_msg("open ~p ~p~n", [Pid, Sid]),
     ObjTbl = ets:new(?OBJ_TBL, [{keypos, #object.hash}]),
-    {ok, #session_state{obj_tbl=ObjTbl}}.
+    {ok, #sess_state{obj_tbl=ObjTbl}}.
 
 
-recv(_Pid, _Sid, {json, <<>>, Json}, State = #session_state{}) ->
+recv(_Pid, _Sid, {json, <<>>, Json}, State = #sess_state{}) ->
     lager:debug("recv json ~p~n", [Json]),
     {ok, State};
 
-recv(_Pid, _Sid, {message, <<>>, _Message}, State = #session_state{}) ->
+recv(_Pid, _Sid, {message, <<>>, _Message}, State = #sess_state{}) ->
 %%  socketio_session:send_message(Pid, Message),
     {ok, State};
 
 recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
-    #session_state{files_pid=FilesPid} = State,
+    #sess_state{files_pid=FilesPid} = State,
     Hash = proplists:get_value(<<"hash">>, Meta),
     assert_hash(Hash),
     #object{path=Path} = extract_object(Hash, State),
@@ -56,7 +56,7 @@ recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
     end;
 
 recv(_, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
-    #session_state{files_pid=FilesPid} = State,
+    #sess_state{files_pid=FilesPid} = State,
     Hash = proplists:get_value(<<"hash">>, Meta),
     assert_hash(Hash),
     #object{path=Path} = extract_object(Hash, State),
@@ -97,21 +97,21 @@ recv(Session, _, {event, <<>>, <<"d_childrenRequest">>, Meta}, State) ->
     FileIDs   = proplists:get_value(<<"file_ids">>, Data),
     assert_hash(Hash),
     FilesPid = %% try start
-        case State#session_state.files_pid of
+        case State#sess_state.files_pid of
             undefined ->
                 {ok, Pid} = cascadae_files:start_link(Session, {files, Hash}),
                 Pid;
             Pid -> Pid
         end,
     cascadae_files:request(FilesPid, TorrentID, FileIDs),
-    {ok, State#session_state{files_pid=FilesPid}};
+    {ok, State#sess_state{files_pid=FilesPid}};
 recv(Session, _, {event, <<>>, <<"d_wishFiles">>, Meta}, State) ->
     spawn_link(fun() ->
         Data      = proplists:get_value(<<"data">>, Meta),
         TorrentID = proplists:get_value(<<"torrent_id">>, Data),
         FileIDs   = proplists:get_value(<<"file_ids">>, Data),
         {ok, NewWishes} = etorrent_torrent_ctl:wish_file(TorrentID, FileIDs),
-        case State#session_state.wish_list_hash of
+        case State#sess_state.wish_list_hash of
             undefined -> ok;
             WLHash ->
                 RespondData = encode_wishes(TorrentID, NewWishes), 
@@ -165,7 +165,7 @@ recv(Pid, Sid, Message, State) ->
 
 
 handle_info(Pid, _, {torrents, What},
-            State=#session_state{torrent_table_hash=Hash})
+            State=#sess_state{torrent_table_hash=Hash})
     when is_binary(Hash) ->
     case What of
         {diff_list, Rows} ->
@@ -179,7 +179,7 @@ handle_info(Pid, _, {torrents, What},
                             [{<<"rows">>, Rows}])
     end,
     {ok, State};
-handle_info(Pid, _, {{files, Hash}, What}, State=#session_state{}) ->
+handle_info(Pid, _, {{files, Hash}, What}, State=#sess_state{}) ->
     case What of
         {add_list, TorrentID, Nodes} ->
             Data = [{<<"torrent_id">>, TorrentID}, {<<"nodes">>, Nodes}],
@@ -189,17 +189,17 @@ handle_info(Pid, _, {{files, Hash}, What}, State=#session_state{}) ->
             fire_data_event(Pid, Hash, <<"rd_dataUpdated">>, Data)
     end,
     {ok, State};
-handle_info(Pid, _, {log_event, Mess}, State = #session_state{}) ->
+handle_info(Pid, _, {log_event, Mess}, State = #sess_state{}) ->
     Message = {event, <<"rd_logEvent">>, Mess},
     socketio_session:send(Pid, Message),
     {ok, State};
 
-handle_info(_Pid, _Sid, Info, State = #session_state{}) ->
+handle_info(_Pid, _Sid, Info, State = #sess_state{}) ->
     lager:debug("Unhandled message recieved ~p.", [Info]),
     {ok, State}.
 
 
-close(Pid, Sid, #session_state{}) ->
+close(Pid, Sid, #sess_state{}) ->
     %% Termination.
     lager:debug("close ~p ~p~n", [Pid, Sid]),
     ok.
@@ -216,12 +216,12 @@ register_object(Path=[<<"cascadae">>,<<"Table">>], Hash, State) ->
         end),
     add_event_listener(Session, Hash, <<"d_startTorrents">>),
     add_event_listener(Session, Hash, <<"d_stopTorrents">>),
-    store_object(Path, Hash, State#session_state{torrent_table_hash=Hash});
+    store_object(Path, Hash, State#sess_state{torrent_table_hash=Hash});
 register_object(Path=[<<"cascadae">>,<<"wishlist">>,<<"List">>], Hash, State) ->
     Session = self(),
     add_event_listener(Session, Hash, <<"d_wishesSave">>),
     add_event_listener(Session, Hash, <<"d_wishesRequest">>),
-    store_object(Path, Hash, State#session_state{wish_list_hash=Hash});
+    store_object(Path, Hash, State#sess_state{wish_list_hash=Hash});
 register_object(Path=[<<"cascadae">>,<<"files">>,<<"Tree">>], Hash, State) ->
     Session = self(),
     add_event_listener(Session, Hash, <<"d_childrenRequest">>),
@@ -244,11 +244,11 @@ register_object(Path, Hash, State) ->
     State.
 
 
-store_object(Path, Hash, State=#session_state{obj_tbl=ObjTbl}) ->
+store_object(Path, Hash, State=#sess_state{obj_tbl=ObjTbl}) ->
     ets:insert_new(ObjTbl, #object{path=Path, hash=Hash}),
     State.
 
-extract_object(Hash, #session_state{obj_tbl=ObjTbl}) ->
+extract_object(Hash, #sess_state{obj_tbl=ObjTbl}) ->
     case ets:lookup(ObjTbl, Hash) of
         [X] -> X
     end.
