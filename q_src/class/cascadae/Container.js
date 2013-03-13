@@ -5,7 +5,12 @@
 qx.Class.define("cascadae.Container",
 {
   extend : qx.ui.container.Composite,
-
+  events :
+  {
+    "activated"          : "qx.event.type.Event",
+    "deactivated"        : "qx.event.type.Event",
+    "r_checkVisibility"  : "qx.event.type.Event"
+  },
 
 
 
@@ -63,6 +68,12 @@ qx.Class.define("cascadae.Container",
     // Set "dead" zones (never will get focus)
     this.__header.setKeepFocus(true);
     this.__toolBar.setKeepFocus(true);
+
+    this.__pageVisibility = qx.bom.PageVisibility.getInstance();
+    this.__pageVisibility.addListener("change",
+                                      this.__checkPageVisibility,
+                                      this);
+    socket.registerObject(this);
   },
 
   members :
@@ -76,6 +87,14 @@ qx.Class.define("cascadae.Container",
     __application : null,
     __viewLoaded : false,
     __activeView : "",
+
+    __checkPageVisibility: function()
+    {
+      if (this.__pageVisibility.isHidden())
+        this.fireEvent("deactivated");
+      else
+        this.fireEvent("activated");
+    },
 
     getRoot : function()
     {

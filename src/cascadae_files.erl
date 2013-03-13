@@ -46,7 +46,7 @@ deactivate(Srv) ->
 %% ------------------------------------------------------------------
 
 init([Session, Tag]) ->
-    TRef = timer:send_interval(5000, update_tree),
+    {ok, TRef} = timer:send_interval(5000, update_tree),
     State = #files_state{
             session_pid=Session,
             session_tag=Tag,
@@ -59,6 +59,7 @@ handle_call(_Request, _From, State) ->
 
 
 handle_cast(activate, State=#files_state{update_tree_tref=undefined}) ->
+    lager:info("Activate timer.", []),
     {ok, TRef} = timer:send_interval(5000, update_tree),
     {noreply, State#files_state{update_tree_tref=TRef}};
 handle_cast(activate, State=#files_state{}) ->
@@ -66,7 +67,8 @@ handle_cast(activate, State=#files_state{}) ->
 handle_cast(deactivate, State=#files_state{update_tree_tref=undefined}) ->
     {noreply, State};
 handle_cast(deactivate, State=#files_state{update_tree_tref=TRef}) ->
-    ok = timer:cancel(TRef),
+    lager:info("Deactivate timer.", []),
+    {ok, cancel} = timer:cancel(TRef),
     {noreply, State#files_state{update_tree_tref=undefined}};
 %% Same torrent.
 handle_cast({request, TorrentID, ParentFileIDs},

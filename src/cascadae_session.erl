@@ -10,7 +10,11 @@
     %% Id of the ETS table with `#object{}' records.
     obj_tbl,
     %% Pid of `cascadae_files' worker.
-    files_pid
+    files_pid,
+    %% Is an interval timer for updates active?
+    is_files_active,
+    is_files_visible,
+    is_page_visible
 }).
 -define(OBJ_TBL, cascadae_object_register).
 -define(HUB, cascadae_hub).
@@ -48,8 +52,9 @@ recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
     #object{path=Path} = extract_object(Hash, State),
     case Path of
          [<<"cascadae">>,<<"files">>,<<"Tree">>] when is_pid(FilesPid) ->
-            cascadae_files:deactivate(FilesPid),
-            {ok, State};
+            {ok, check_file_visibility(State#sess_state{is_files_visible=false})};
+         [<<"cascadae">>,<<"Container">>] ->
+            {ok, check_file_visibility(State#sess_state{is_page_visible=false})};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
@@ -62,8 +67,9 @@ recv(_, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
     #object{path=Path} = extract_object(Hash, State),
     case Path of
          [<<"cascadae">>,<<"files">>,<<"Tree">>] when is_pid(FilesPid) ->
-            cascadae_files:activate(FilesPid),
-            {ok, State};
+            {ok, check_file_visibility(State#sess_state{is_files_visible=true})};
+         [<<"cascadae">>,<<"Container">>] ->
+            {ok, check_file_visibility(State#sess_state{is_page_visible=true})};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
@@ -104,7 +110,8 @@ recv(Session, _, {event, <<>>, <<"d_childrenRequest">>, Meta}, State) ->
             Pid -> Pid
         end,
     cascadae_files:request(FilesPid, TorrentID, FileIDs),
-    {ok, State#sess_state{files_pid=FilesPid}};
+    {ok, State#sess_state{files_pid=FilesPid,
+                          is_files_active=true, is_files_visible=true}};
 recv(Session, _, {event, <<>>, <<"d_wishFiles">>, Meta}, State) ->
     spawn_link(fun() ->
         Data      = proplists:get_value(<<"data">>, Meta),
@@ -231,13 +238,22 @@ register_object(Path=[<<"cascadae">>,<<"files">>,<<"Tree">>], Hash, State) ->
     add_event_listener(Session, Hash, <<"activated">>),
     add_event_listener(Session, Hash, <<"deactivated">>),
     store_object(Path, Hash, State);
+register_object(Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
+    Session = self(),
+    add_event_listener(Session, Hash, <<"activated">>),
+    add_event_listener(Session, Hash, <<"deactivated">>),
+    add_event_listener(Session, Hash, <<"r_checkVisibility">>),
+    store_object(Path, Hash, State);
+
 register_object(Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
-%   Session = self(),
+    Session = self(),
 %   proc_lib:spawn_link(fun() ->
 %           Peers = cascadae_peers:all_peers(),
 %           fire_data_event(Session, Hash, <<"rd_dataLoadCompleted">>,
 %                           [{<<"rows">>, Peers}])
 %       end),
+    add_event_listener(Session, Hash, <<"activated">>),
+    add_event_listener(Session, Hash, <<"deactivated">>),
     store_object(Path, Hash, State);
 register_object(Path, Hash, State) ->
     lager:warning("Cannot register objest ~p:~p.", [Path, Hash]),
@@ -314,3 +330,19 @@ decode_wishes(Wishes) ->
         if is_binary(V) -> binary_to_existing_atom(V, utf8);
                    true -> V
         end} || {K, V} <- X, K =/= <<"name">>] || X <- Wishes].
+
+
+
+%% The timer must be active only when the page is visible and file view is active.
+check_file_visibility(State=#sess_state{is_page_visible=true,
+                                        is_files_visible=true,
+                                        is_files_active=false,
+                                        files_pid=FilesPid}) ->
+    cascadae_files:activate(FilesPid),
+    State#sess_state{is_files_active=true};
+check_file_visibility(State=#sess_state{is_files_active=true,
+                                        files_pid=FilesPid}) ->
+    cascadae_files:deactivate(FilesPid),
+    State#sess_state{is_files_active=false};
+check_file_visibility(State) ->
+    State.
