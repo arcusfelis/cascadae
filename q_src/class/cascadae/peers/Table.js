@@ -21,7 +21,9 @@ qx.Class.define("cascadae.peers.Table",
       "state"          : this.tr("State"),
       "choke_state"    : this.tr("Choking"),
       "interest_state" : this.tr("Intersted"),
-      "local_choke"    : this.tr("Is choking?")
+      "local_choke"    : this.tr("Is choking?"),
+      "recv_rate"      : this.tr("Rate In"),
+      "send_rate"      : this.tr("Rate Out")
     };
 
     this.base(arguments, n2c);
@@ -39,6 +41,11 @@ qx.Class.define("cascadae.peers.Table",
     rb.set(n2p.interest_state,   { width:"1*", minWidth: 60 });
     rb.set(n2p.choke_state,      { width:"1*", minWidth: 60 });
     rb.set(n2p.local_choke,      { width:"1*", minWidth: 40 });
+    rb.set(n2p.recv_rate,        { width:"1*", minWidth: 70 });
+    rb.set(n2p.send_rate,        { width:"1*", minWidth: 70 });
+
+    tcm.setDataCellRenderer(n2p.recv_rate, new cascadae.cellrenderer.Speed());
+    tcm.setDataCellRenderer(n2p.send_rate, new cascadae.cellrenderer.Speed());
 
     tcm.setDataCellRenderer(n2p.local_choke, 
       new qx.ui.table.cellrenderer.Boolean());

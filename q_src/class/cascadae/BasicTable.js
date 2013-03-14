@@ -80,6 +80,12 @@ qx.Class.define("cascadae.BasicTable",
     __columnNums : null,
     __columnNames : null,
     __columnCaptions : null,
+    __active : false,
+    // Is this widget newer activated?
+    __virgin : true,
+    // If true, than the data must be reloaded, when the table will be active
+    // again.
+    __dirty : false,
 
     _onKeyPress : function(e)
     {
@@ -378,7 +384,7 @@ qx.Class.define("cascadae.BasicTable",
       this.__filteredView = tm.addView(this._mainTableFilter, this);
 
       var msm = main.getSelectionModel();
-      msm.addListener("changeSelection", this.updateFilters, this);
+      msm.addListener("changeSelection", this._changeMainTableSelection, this);
     },
 
     _mainTableFilter : function(row)
@@ -388,17 +394,43 @@ qx.Class.define("cascadae.BasicTable",
       return (this._oldSelection.indexOf(tid) != -1);
     },
 
+    setActive : function(bActive) {
+      if (bActive == this.__active)
+          return;
+
+      // is visable
+      this.__active = bActive;
+      if (bActive && this.__dirty) 
+        this.updateFilters();
+      this.__dirty = false;
+      this.fireEvent(this.__active ? "activated" : "deactivated");
+
+      this.info("Activate peer table " + this.__active);
+      if (this.__virgin)
+      {
+        this.fireDataEvent("d_updateFilters",
+                           {"torrent_ids": this._oldSelection});
+        this.__virgin = false;
+      }
+    },
+
+    _changeMainTableSelection: function(e) {
+      if (this.__active) this.updateFilters();
+      else this.__dirty = true;
+    },
+
     /**
      * TODOC
      *
      */
-    updateFilters : function(e)
+    updateFilters : function() 
     {
       this.info("change selection");
       var tm = this.__tableModel; 
 
       var newSel = this.__mainTable.getSelectedIds();
       if (qx.lang.Array.equals(this._oldSelection, newSel)) return;
+      this.fireDataEvent("d_updateFilters", {"torrent_ids": newSel});
 
       this._oldSelection = qx.lang.Array.clone(newSel);
 
@@ -417,8 +449,18 @@ qx.Class.define("cascadae.BasicTable",
 
   events :
   {
+    /**
+     * The data is a map containing this properties:
+     * <ul>
+     *   <li>torrent_ids - New visible torrent ids</li>
+     * </ul>
+     */
+    "d_updateFilters"      : "qx.event.type.Data",
+    "activated"            : "qx.event.type.Event",
+    "deactivated"          : "qx.event.type.Event",
+
     // Data in the table model was changed
-    "tableRefreshed" : "qx.event.type.Event",
+    "tableRefreshed"       : "qx.event.type.Event",
 
     // Remote events
     "rd_dataAdded"         : "qx.event.type.Data",

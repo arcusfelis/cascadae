@@ -207,6 +207,9 @@ qx.Class.define("cascadae.wishlist.List",
 
     setActive : function(bActive) 
     {
+      if (bActive == this.__active)
+          return;
+
       // is visable
       this.__active = bActive;
       if (bActive) 

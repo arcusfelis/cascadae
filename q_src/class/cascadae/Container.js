@@ -73,6 +73,7 @@ qx.Class.define("cascadae.Container",
     this.__pageVisibility.addListener("change",
                                       this.__checkPageVisibility,
                                       this);
+    this.addListener("r_checkVisibility", this.__checkPageVisibility, this);
     socket.registerObject(this);
   },
 
@@ -400,6 +401,7 @@ qx.Class.define("cascadae.Container",
     {
       var isFileViewEnabled = false;
       var isWishViewEnabled = false;
+      var isPeerViewEnabled = false;
       this.info("Select view " + show);
 
       switch(show)
@@ -423,6 +425,7 @@ qx.Class.define("cascadae.Container",
           this.__stack.setSelection([ this.__peersView ]);
           this.__stack.show();
           this.__peersView.focus();
+          isPeerViewEnabled = true;
           break;
 
         case "log":
@@ -438,7 +441,10 @@ qx.Class.define("cascadae.Container",
       }
 
       this.__filesTree.setActive(isFileViewEnabled);
+      this.__filesTree.setActive(isFileViewEnabled);
       this.__wishesList.setActive(isWishViewEnabled);
+      this.__peersTable.setActive(isPeerViewEnabled);
+      this.__logTable.setActive(true);
     },
 
 

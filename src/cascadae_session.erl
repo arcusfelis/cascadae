@@ -12,8 +12,11 @@
     %% Pid of `cascadae_files' worker.
     files_pid,
     %% Is an interval timer for updates active?
-    is_files_active,
+    is_files_active = true,
     is_files_visible,
+    peers_pid,
+    is_peers_active = true,
+    is_peers_visible,
     is_page_visible
 }).
 -define(OBJ_TBL, cascadae_object_register).
@@ -37,6 +40,7 @@ open(Pid, Sid, _Opts) ->
     {ok, #sess_state{obj_tbl=ObjTbl}}.
 
 
+%% Pid is not self().
 recv(_Pid, _Sid, {json, <<>>, Json}, State = #sess_state{}) ->
     lager:debug("recv json ~p~n", [Json]),
     {ok, State};
@@ -46,15 +50,18 @@ recv(_Pid, _Sid, {message, <<>>, _Message}, State = #sess_state{}) ->
     {ok, State};
 
 recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
-    #sess_state{files_pid=FilesPid} = State,
+    #sess_state{files_pid=FilesPid, peers_pid=PeersPid} = State,
     Hash = proplists:get_value(<<"hash">>, Meta),
     assert_hash(Hash),
     #object{path=Path} = extract_object(Hash, State),
     case Path of
          [<<"cascadae">>,<<"files">>,<<"Tree">>] when is_pid(FilesPid) ->
             {ok, check_file_visibility(State#sess_state{is_files_visible=false})};
+         [<<"cascadae">>,<<"peers">>,<<"Table">>]  when is_pid(PeersPid) ->
+            {ok, check_peer_visibility(State#sess_state{is_peers_visible=false})};
          [<<"cascadae">>,<<"Container">>] ->
-            {ok, check_file_visibility(State#sess_state{is_page_visible=false})};
+            {ok, check_peer_visibility(
+                 check_file_visibility(State#sess_state{is_page_visible=false}))};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
@@ -67,9 +74,24 @@ recv(_, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
     #object{path=Path} = extract_object(Hash, State),
     case Path of
          [<<"cascadae">>,<<"files">>,<<"Tree">>] when is_pid(FilesPid) ->
+            %% It is only meaningful, if the process started.
             {ok, check_file_visibility(State#sess_state{is_files_visible=true})};
+         [<<"cascadae">>,<<"peers">>,<<"Table">>] ->
+            %% It is only meaningful, if nothing is selected.
+            %% Start here.
+            PeersPid = %% try start
+                case State#sess_state.peers_pid of
+                    undefined ->
+                        {ok, Pid} = cascadae_peers:start_link(self(),
+                                                              {peers, Hash}),
+                        Pid;
+                    Pid -> Pid
+                end,
+            {ok, check_peer_visibility(State#sess_state{is_peers_visible=true,
+                                                        peers_pid=PeersPid})};
          [<<"cascadae">>,<<"Container">>] ->
-            {ok, check_file_visibility(State#sess_state{is_page_visible=true})};
+            {ok, check_peer_visibility(
+                 check_file_visibility(State#sess_state{is_page_visible=true}))};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
@@ -96,22 +118,21 @@ recv(_, _, {event, <<>>, <<"d_stopTorrents">>, Meta}, State) ->
 
 %% FILES
 %% Request children of the file tree.
-recv(Session, _, {event, <<>>, <<"d_childrenRequest">>, Meta}, State) ->
+recv(_, _, {event, <<>>, <<"d_childrenRequest">>, Meta}, State) ->
     Hash      = proplists:get_value(<<"hash">>, Meta),
     Data      = proplists:get_value(<<"data">>, Meta),
     TorrentID = proplists:get_value(<<"torrent_id">>, Data),
     FileIDs   = proplists:get_value(<<"file_ids">>, Data),
     assert_hash(Hash),
-    FilesPid = %% try start
+    FilesPid =    %% try start
         case State#sess_state.files_pid of
             undefined ->
-                {ok, Pid} = cascadae_files:start_link(Session, {files, Hash}),
+                {ok, Pid} = cascadae_files:start_link(self(), {files, Hash}),
                 Pid;
             Pid -> Pid
         end,
     cascadae_files:request(FilesPid, TorrentID, FileIDs),
-    {ok, State#sess_state{files_pid=FilesPid,
-                          is_files_active=true, is_files_visible=true}};
+    {ok, State#sess_state{files_pid=FilesPid, is_files_visible=true}};
 recv(Session, _, {event, <<>>, <<"d_wishFiles">>, Meta}, State) ->
     spawn_link(fun() ->
         Data      = proplists:get_value(<<"data">>, Meta),
@@ -166,6 +187,16 @@ recv(_, _, {event, <<>>, <<"d_wishesSave">>, Meta}, State) ->
         end),
     {ok, State};
 
+recv(_, _, {event, <<>>, <<"d_updateFilters">>, Meta},
+     State=#sess_state{peers_pid=PeersPid}) when is_pid(PeersPid) ->
+    Hash      = proplists:get_value(<<"hash">>, Meta),
+    Data      = proplists:get_value(<<"data">>, Meta),
+    TorrentIDs = proplists:get_value(<<"torrent_ids">>, Data),
+    assert_hash(Hash),
+    assert_list(TorrentIDs),
+    cascadae_peers:set_torrent_list(PeersPid, TorrentIDs),
+    {ok, State};
+
 recv(Pid, Sid, Message, State) ->
     lager:debug("recv ~p ~p ~p~n", [Pid, Sid, Message]),
     {ok, State}.
@@ -174,6 +205,23 @@ recv(Pid, Sid, Message, State) ->
 handle_info(Pid, _, {torrents, What},
             State=#sess_state{torrent_table_hash=Hash})
     when is_binary(Hash) ->
+    case What of
+        {diff_list, Rows} ->
+            % FIXME
+%           fire_data_event(Pid, Hash, <<"rd_dataUpdated">>,
+%                           [{<<"rows">>, Rows}]),
+            State;
+        {add_list, Rows} ->
+            fire_data_event(Pid, Hash, <<"rd_dataAdded">>,
+                            [{<<"rows">>, Rows}]);
+        {delete_list, Rows} ->
+            fire_data_event(Pid, Hash, <<"rd_dataRemoved">>,
+                            [{<<"rows">>, Rows}])
+    end,
+    {ok, State};
+handle_info(Pid, _, {{peers, Hash}, What}, State=#sess_state{})
+    when is_binary(Hash) ->
+    lager:info("PEEERS", []),
     case What of
         {diff_list, Rows} ->
             fire_data_event(Pid, Hash, <<"rd_dataUpdated">>,
@@ -242,7 +290,7 @@ register_object(Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
     Session = self(),
     add_event_listener(Session, Hash, <<"activated">>),
     add_event_listener(Session, Hash, <<"deactivated">>),
-    add_event_listener(Session, Hash, <<"r_checkVisibility">>),
+    fire_event(Session, Hash, <<"r_checkVisibility">>),
     store_object(Path, Hash, State);
 
 register_object(Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
@@ -254,6 +302,7 @@ register_object(Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
 %       end),
     add_event_listener(Session, Hash, <<"activated">>),
     add_event_listener(Session, Hash, <<"deactivated">>),
+    add_event_listener(Session, Hash, <<"d_updateFilters">>),
     store_object(Path, Hash, State);
 register_object(Path, Hash, State) ->
     lager:warning("Cannot register objest ~p:~p.", [Path, Hash]),
@@ -268,6 +317,14 @@ extract_object(Hash, #sess_state{obj_tbl=ObjTbl}) ->
     case ets:lookup(ObjTbl, Hash) of
         [X] -> X
     end.
+
+
+fire_event(Session, Hash, EventName) ->
+    lager:debug("Fire event ~p.", [EventName]),
+    Args = [{<<"name">>, EventName},
+            {<<"hash">>, Hash}],
+    Message = {event, <<"fireEvent">>, Args},
+    socketio_session:send(Session, Message).
 
 
 fire_data_event(Session, Hash, EventName, EventData) ->
@@ -289,6 +346,7 @@ add_event_listener(Session, Hash, EventName) ->
 
 
 assert_path(Path) when is_list(Path) -> ok.
+assert_list(List) when is_list(List) -> ok.
 assert_hash(Hash) when is_binary(Hash) -> ok.
 
 
@@ -345,4 +403,23 @@ check_file_visibility(State=#sess_state{is_files_active=true,
     cascadae_files:deactivate(FilesPid),
     State#sess_state{is_files_active=false};
 check_file_visibility(State) ->
+    State.
+
+
+check_peer_visibility(State=#sess_state{is_page_visible=true,
+                                        is_peers_visible=true,
+                                        is_peers_active=false,
+                                        peers_pid=PeersPid}) ->
+    cascadae_peers:activate(PeersPid),
+    State#sess_state{is_peers_active=true};
+check_peer_visibility(State=#sess_state{is_peers_active=true,
+                                        peers_pid=PeersPid}) ->
+    cascadae_peers:deactivate(PeersPid),
+    State#sess_state{is_peers_active=false};
+check_peer_visibility(State) ->
+    lager:info("Check visibility failed, page visible = ~p, "
+               "peer visible = ~p, peer process active = ~p.",
+               [State#sess_state.is_page_visible,
+                State#sess_state.is_peers_visible,
+                State#sess_state.is_peers_active]),
     State.

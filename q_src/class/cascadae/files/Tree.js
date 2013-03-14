@@ -262,6 +262,9 @@ qx.Class.define("cascadae.files.Tree",
 
 
     setActive : function(bActive) {
+      if (bActive == this.__active)
+          return;
+
       // is visable
       this.__active = bActive;
       if (bActive && this.__dirty) 
