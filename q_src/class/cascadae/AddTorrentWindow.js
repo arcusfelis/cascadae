@@ -41,12 +41,16 @@ qx.Class.define("cascadae.AddTorrentWindow",
     this.addListenerOnce("resize", this.center, this);
 
     this.__model = model;
+    var resetter = this.__resetter = new qx.ui.form.Resetter();
+    resetter.add(address_ta);
+    resetter.add(paused_cb);
   },
   members: {
     __save: function()
     {
       var data = qx.util.Serializer.toNativeObject(this.__model);
       this.fireDataEvent("submitData", data);
+      this.__resetter.reset();
       this.close();
     }
   },

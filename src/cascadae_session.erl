@@ -197,6 +197,27 @@ recv(_, _, {event, <<>>, <<"d_updateFilters">>, Meta},
     cascadae_peers:set_torrent_list(PeersPid, TorrentIDs),
     {ok, State};
 
+recv(_, _, {event, <<>>, <<"submitData">>, Meta}, State=#sess_state{}) ->
+    Hash      = proplists:get_value(<<"hash">>, Meta),
+    Data      = proplists:get_value(<<"data">>, Meta),
+    #object{path=Path} = extract_object(Hash, State),
+    case Path of
+       [<<"cascadae">>,<<"AddTorrentWindow">>] ->
+            Address   = proplists:get_value(<<"address">>, Data),
+            Paused    = proplists:get_value(<<"paused">>, Data),
+            IsPaused = if Paused -> true; true -> false end,
+            [lager:debug("Add ~p on pause.", [Address]) || IsPaused],
+            proc_lib:spawn(fun() ->
+                {ok, FileName} = etorrent_magnet:download({address, Address}),
+                case etorrent_ctl:start(FileName, [{paused, IsPaused}]) of
+                    {ok, TorrentID} ->
+                        lager:info("Start torrent #~p from ~p from browser.",
+                                   [TorrentID, FileName])
+                end
+                end),
+            {ok, State}
+    end;
+
 recv(Pid, Sid, Message, State) ->
     lager:debug("recv ~p ~p ~p~n", [Pid, Sid, Message]),
     {ok, State}.
@@ -207,9 +228,8 @@ handle_info(Pid, _, {torrents, What},
     when is_binary(Hash) ->
     case What of
         {diff_list, Rows} ->
-            % FIXME
-%           fire_data_event(Pid, Hash, <<"rd_dataUpdated">>,
-%                           [{<<"rows">>, Rows}]),
+            fire_data_event(Pid, Hash, <<"rd_dataUpdated">>,
+                            [{<<"rows">>, Rows}]),
             State;
         {add_list, Rows} ->
             fire_data_event(Pid, Hash, <<"rd_dataAdded">>,
@@ -221,7 +241,6 @@ handle_info(Pid, _, {torrents, What},
     {ok, State};
 handle_info(Pid, _, {{peers, Hash}, What}, State=#sess_state{})
     when is_binary(Hash) ->
-    lager:info("PEEERS", []),
     case What of
         {diff_list, Rows} ->
             fire_data_event(Pid, Hash, <<"rd_dataUpdated">>,
@@ -295,15 +314,16 @@ register_object(Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
 
 register_object(Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
     Session = self(),
-%   proc_lib:spawn_link(fun() ->
-%           Peers = cascadae_peers:all_peers(),
-%           fire_data_event(Session, Hash, <<"rd_dataLoadCompleted">>,
-%                           [{<<"rows">>, Peers}])
-%       end),
     add_event_listener(Session, Hash, <<"activated">>),
     add_event_listener(Session, Hash, <<"deactivated">>),
     add_event_listener(Session, Hash, <<"d_updateFilters">>),
     store_object(Path, Hash, State);
+
+register_object(Path=[<<"cascadae">>,<<"AddTorrentWindow">>], Hash, State) ->
+    Session = self(),
+    add_event_listener(Session, Hash, <<"submitData">>),
+    store_object(Path, Hash, State);
+
 register_object(Path, Hash, State) ->
     lager:warning("Cannot register objest ~p:~p.", [Path, Hash]),
     State.

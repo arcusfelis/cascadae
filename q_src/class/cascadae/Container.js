@@ -278,19 +278,19 @@ qx.Class.define("cascadae.Container",
      *
      */
     showAddTorrentDialog : function() {
-      var win = new cascadae.AddTorrentWindow();
-      this.getRoot().add(win);
+      var win = this.__addTorrentWindow;
+      if (!win)
+      {
+        this.__addTorrentWindow = win = new cascadae.AddTorrentWindow();
+        this.__socket.registerObject(win);
+        this.getRoot().add(win);
+        win.addListener("close", this.__table.focus, this.__table);
+//      win.addListener("submitData", this.__addTorrentSubmit, this);
+      }
+        
       win.show();
 //    win.focus();
-      win.addListener("close", this.__table.focus, this.__table);
-      win.addListener("submitData", this.__addTorrentSubmit, this);
     },
-
-    __addTorrentSubmit : function(e) {
-        this.info("TODO");
-//      this.__store.addTorrent(e.getData());
-    },
-
 
     /**
      * Get the command with the given command id
