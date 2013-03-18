@@ -17,9 +17,12 @@
     peers_pid,
     is_peers_active = true,
     is_peers_visible,
-    is_page_visible
+    is_page_visible,
+    session_timeout_tref
 }).
 -define(OBJ_TBL, cascadae_object_register).
+%% The socketio_session has same timeout already, but this timeout is 
+%% called from the client side.
 -define(HUB, cascadae_hub).
 
 -record(object, {
@@ -28,24 +31,27 @@
 }).
 
 %% API
-send(Pid, Mess) ->
-    Pid ! Mess.
+send(SPid, Mess) ->
+    SPid ! Mess.
 
 %% ---- Handlers
-open(Pid, Sid, _Opts) ->
+open(SPid, Sid, _Opts) ->
+    put(process_type, cascadae_session),
     %% Initialization
     ?HUB:add_handler(),
-    error_logger:info_msg("open ~p ~p~n", [Pid, Sid]),
+    error_logger:info_msg("open ~p ~p~n", [SPid, Sid]),
     ObjTbl = ets:new(?OBJ_TBL, [{keypos, #object.hash}]),
     {ok, #sess_state{obj_tbl=ObjTbl}}.
 
 
-%% Pid is not self().
-recv(_Pid, _Sid, {json, <<>>, Json}, State = #sess_state{}) ->
+recv(SPid, _Sid, _, #sess_state{}) when SPid =/= self() ->
+    error_logger:error_msg("FUUUU", []),
+    error(haha);
+recv(_SPid, _Sid, {json, <<>>, Json}, State = #sess_state{}) ->
     lager:debug("recv json ~p~n", [Json]),
     {ok, State};
 
-recv(_Pid, _Sid, {message, <<>>, _Message}, State = #sess_state{}) ->
+recv(_SPid, _Sid, {message, <<>>, _Message}, State = #sess_state{}) ->
 %%  socketio_session:send_message(Pid, Message),
     {ok, State};
 
@@ -67,7 +73,7 @@ recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
             {ok, State}
     end;
 
-recv(_, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
+recv(SPid, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
     #sess_state{files_pid=FilesPid} = State,
     Hash = proplists:get_value(<<"hash">>, Meta),
     assert_hash(Hash),
@@ -82,7 +88,7 @@ recv(_, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
             PeersPid = %% try start
                 case State#sess_state.peers_pid of
                     undefined ->
-                        {ok, Pid} = cascadae_peers:start_link(self(),
+                        {ok, Pid} = cascadae_peers:start_link(SPid,
                                                               {peers, Hash}),
                         Pid;
                     Pid -> Pid
@@ -97,12 +103,12 @@ recv(_, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
             {ok, State}
     end;
 
-recv(_, _, {event, <<>>, <<"registerObject">>, Meta}, State) ->
+recv(SPid, _, {event, <<>>, <<"registerObject">>, Meta}, State) ->
     Path = proplists:get_value(<<"path">>, Meta),
     Hash = proplists:get_value(<<"hash">>, Meta),
     assert_path(Path),
     assert_hash(Hash),
-    {ok, register_object(Path, Hash, State)};
+    {ok, register_object(SPid, Path, Hash, State)};
 
 %% TORRENTS
 recv(_, _, {event, <<>>, <<"d_startTorrents">>, Meta}, State) ->
@@ -118,7 +124,7 @@ recv(_, _, {event, <<>>, <<"d_stopTorrents">>, Meta}, State) ->
 
 %% FILES
 %% Request children of the file tree.
-recv(_, _, {event, <<>>, <<"d_childrenRequest">>, Meta}, State) ->
+recv(SPid, _, {event, <<>>, <<"d_childrenRequest">>, Meta}, State) ->
     Hash      = proplists:get_value(<<"hash">>, Meta),
     Data      = proplists:get_value(<<"data">>, Meta),
     TorrentID = proplists:get_value(<<"torrent_id">>, Data),
@@ -127,13 +133,13 @@ recv(_, _, {event, <<>>, <<"d_childrenRequest">>, Meta}, State) ->
     FilesPid =    %% try start
         case State#sess_state.files_pid of
             undefined ->
-                {ok, Pid} = cascadae_files:start_link(self(), {files, Hash}),
-                Pid;
-            Pid -> Pid
+                {ok, PPid} = cascadae_files:start_link(SPid, {files, Hash}),
+                PPid;
+            PPid -> PPid
         end,
     cascadae_files:request(FilesPid, TorrentID, FileIDs),
     {ok, State#sess_state{files_pid=FilesPid, is_files_visible=true}};
-recv(Session, _, {event, <<>>, <<"d_wishFiles">>, Meta}, State) ->
+recv(SPid, _, {event, <<>>, <<"d_wishFiles">>, Meta}, State) ->
     spawn_link(fun() ->
         Data      = proplists:get_value(<<"data">>, Meta),
         TorrentID = proplists:get_value(<<"torrent_id">>, Data),
@@ -143,7 +149,7 @@ recv(Session, _, {event, <<>>, <<"d_wishFiles">>, Meta}, State) ->
             undefined -> ok;
             WLHash ->
                 RespondData = encode_wishes(TorrentID, NewWishes), 
-                fire_data_event(Session, WLHash, <<"rd_wishesRespond">>,
+                fire_data_event(SPid, WLHash, <<"rd_wishesRespond">>,
                                 RespondData) 
         end
         end),
@@ -166,14 +172,14 @@ recv(_, _, {event, <<>>, <<"d_unskipFiles">>, Meta}, State) ->
     {ok, State};
 
 %% WISHES
-recv(Session, _, {event, <<>>, <<"d_wishesRequest">>, Meta}, State) ->
+recv(SPid, _, {event, <<>>, <<"d_wishesRequest">>, Meta}, State) ->
     spawn_link(fun() ->
         Hash      = proplists:get_value(<<"hash">>, Meta),
         Data      = proplists:get_value(<<"data">>, Meta),
         TorrentID = proplists:get_value(<<"torrent_id">>, Data),
         {ok, Wishes} = etorrent_torrent_ctl:get_wishes(TorrentID),
         RespondData = encode_wishes(TorrentID, Wishes), 
-        fire_data_event(Session, Hash, <<"rd_wishesRespond">>, RespondData) 
+        fire_data_event(SPid, Hash, <<"rd_wishesRespond">>, RespondData) 
         end),
     {ok, State};
 recv(_, _, {event, <<>>, <<"d_wishesSave">>, Meta}, State) ->
@@ -213,113 +219,107 @@ recv(_, _, {event, <<>>, <<"submitData">>, Meta}, State=#sess_state{}) ->
             {ok, State}
     end;
 
-recv(Pid, Sid, Message, State) ->
-    lager:debug("recv ~p ~p ~p~n", [Pid, Sid, Message]),
+recv(SPid, Sid, Message, State) ->
+    lager:debug("recv ~p ~p ~p~n", [SPid, Sid, Message]),
     {ok, State}.
 
 
-handle_info(Pid, _, {torrents, What},
+handle_info(SPid, _, {torrents, What},
             State=#sess_state{torrent_table_hash=Hash})
     when is_binary(Hash) ->
     case What of
         {diff_list, Rows} ->
-            fire_data_event(Pid, Hash, <<"rd_dataUpdated">>,
+            fire_data_event(SPid, Hash, <<"rd_dataUpdated">>,
                             [{<<"rows">>, Rows}]),
             State;
         {add_list, Rows} ->
-            fire_data_event(Pid, Hash, <<"rd_dataAdded">>,
+            fire_data_event(SPid, Hash, <<"rd_dataAdded">>,
                             [{<<"rows">>, Rows}]);
         {delete_list, Rows} ->
-            fire_data_event(Pid, Hash, <<"rd_dataRemoved">>,
+            fire_data_event(SPid, Hash, <<"rd_dataRemoved">>,
                             [{<<"rows">>, Rows}])
     end,
     {ok, State};
-handle_info(Pid, _, {{peers, Hash}, What}, State=#sess_state{})
+handle_info(SPid, _, {{peers, Hash}, What}, State=#sess_state{})
     when is_binary(Hash) ->
     case What of
         {diff_list, Rows} ->
-            fire_data_event(Pid, Hash, <<"rd_dataUpdated">>,
+            fire_data_event(SPid, Hash, <<"rd_dataUpdated">>,
                             [{<<"rows">>, Rows}]);
         {add_list, Rows} ->
-            fire_data_event(Pid, Hash, <<"rd_dataAdded">>,
+            fire_data_event(SPid, Hash, <<"rd_dataAdded">>,
                             [{<<"rows">>, Rows}]);
         {delete_list, Rows} ->
-            fire_data_event(Pid, Hash, <<"rd_dataRemoved">>,
+            fire_data_event(SPid, Hash, <<"rd_dataRemoved">>,
                             [{<<"rows">>, Rows}])
     end,
     {ok, State};
-handle_info(Pid, _, {{files, Hash}, What}, State=#sess_state{}) ->
+handle_info(SPid, _, {{files, Hash}, What}, State=#sess_state{}) ->
     case What of
         {add_list, TorrentID, Nodes} ->
             Data = [{<<"torrent_id">>, TorrentID}, {<<"nodes">>, Nodes}],
-            fire_data_event(Pid, Hash, <<"rd_childrenRespond">>, Data);
+            fire_data_event(SPid, Hash, <<"rd_childrenRespond">>, Data);
         {diff_list, TorrentID, Diff} ->
             Data = [{<<"torrent_id">>, TorrentID}, {<<"nodes">>, Diff}],
-            fire_data_event(Pid, Hash, <<"rd_dataUpdated">>, Data)
+            fire_data_event(SPid, Hash, <<"rd_dataUpdated">>, Data)
     end,
     {ok, State};
-handle_info(Pid, _, {log_event, Mess}, State = #sess_state{}) ->
+handle_info(SPid, _, {log_event, Mess}, State = #sess_state{}) ->
     Message = {event, <<"rd_logEvent">>, Mess},
-    socketio_session:send(Pid, Message),
+    socketio_session:send(SPid, Message),
     {ok, State};
 
-handle_info(_Pid, _Sid, Info, State = #sess_state{}) ->
+handle_info(_SPid, _Sid, Info, State = #sess_state{}) ->
     lager:debug("Unhandled message recieved ~p.", [Info]),
     {ok, State}.
 
 
-close(Pid, Sid, #sess_state{}) ->
+close(SPid, Sid, #sess_state{}) ->
     %% Termination.
-    lager:debug("close ~p ~p~n", [Pid, Sid]),
+    lager:debug("close ~p ~p~n", [SPid, Sid]),
     ok.
 
 
 %% ------------------------------------------------------------------
 
-register_object(Path=[<<"cascadae">>,<<"Table">>], Hash, State) ->
-    Session = self(),
+register_object(SPid, Path=[<<"cascadae">>,<<"Table">>], Hash, State) ->
     proc_lib:spawn_link(fun() ->
             Torrents = ?HUB:all_torrents(),
-            fire_data_event(Session, Hash, <<"rd_dataLoadCompleted">>,
+            fire_data_event(SPid, Hash, <<"rd_dataLoadCompleted">>,
                             [{<<"rows">>, Torrents}])
         end),
-    add_event_listener(Session, Hash, <<"d_startTorrents">>),
-    add_event_listener(Session, Hash, <<"d_stopTorrents">>),
+    add_event_listener(SPid, Hash, <<"d_startTorrents">>),
+    add_event_listener(SPid, Hash, <<"d_stopTorrents">>),
     store_object(Path, Hash, State#sess_state{torrent_table_hash=Hash});
-register_object(Path=[<<"cascadae">>,<<"wishlist">>,<<"List">>], Hash, State) ->
-    Session = self(),
-    add_event_listener(Session, Hash, <<"d_wishesSave">>),
-    add_event_listener(Session, Hash, <<"d_wishesRequest">>),
+register_object(SPid, Path=[<<"cascadae">>,<<"wishlist">>,<<"List">>], Hash, State) ->
+    add_event_listener(SPid, Hash, <<"d_wishesSave">>),
+    add_event_listener(SPid, Hash, <<"d_wishesRequest">>),
     store_object(Path, Hash, State#sess_state{wish_list_hash=Hash});
-register_object(Path=[<<"cascadae">>,<<"files">>,<<"Tree">>], Hash, State) ->
-    Session = self(),
-    add_event_listener(Session, Hash, <<"d_childrenRequest">>),
-    add_event_listener(Session, Hash, <<"d_wishFiles">>),
-    add_event_listener(Session, Hash, <<"d_skipFiles">>),
-    add_event_listener(Session, Hash, <<"d_unskipFiles">>),
-    add_event_listener(Session, Hash, <<"activated">>),
-    add_event_listener(Session, Hash, <<"deactivated">>),
+register_object(SPid, Path=[<<"cascadae">>,<<"files">>,<<"Tree">>], Hash, State) ->
+    add_event_listener(SPid, Hash, <<"d_childrenRequest">>),
+    add_event_listener(SPid, Hash, <<"d_wishFiles">>),
+    add_event_listener(SPid, Hash, <<"d_skipFiles">>),
+    add_event_listener(SPid, Hash, <<"d_unskipFiles">>),
+    add_event_listener(SPid, Hash, <<"activated">>),
+    add_event_listener(SPid, Hash, <<"deactivated">>),
     store_object(Path, Hash, State);
-register_object(Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
-    Session = self(),
-    add_event_listener(Session, Hash, <<"activated">>),
-    add_event_listener(Session, Hash, <<"deactivated">>),
-    fire_event(Session, Hash, <<"r_checkVisibility">>),
+register_object(SPid, Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
+    add_event_listener(SPid, Hash, <<"activated">>),
+    add_event_listener(SPid, Hash, <<"deactivated">>),
+    fire_event(SPid, Hash, <<"r_checkVisibility">>),
     store_object(Path, Hash, State);
 
-register_object(Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
-    Session = self(),
-    add_event_listener(Session, Hash, <<"activated">>),
-    add_event_listener(Session, Hash, <<"deactivated">>),
-    add_event_listener(Session, Hash, <<"d_updateFilters">>),
+register_object(SPid, Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
+    add_event_listener(SPid, Hash, <<"activated">>),
+    add_event_listener(SPid, Hash, <<"deactivated">>),
+    add_event_listener(SPid, Hash, <<"d_updateFilters">>),
     store_object(Path, Hash, State);
 
-register_object(Path=[<<"cascadae">>,<<"AddTorrentWindow">>], Hash, State) ->
-    Session = self(),
-    add_event_listener(Session, Hash, <<"submitData">>),
+register_object(SPid, Path=[<<"cascadae">>,<<"AddTorrentWindow">>], Hash, State) ->
+    add_event_listener(SPid, Hash, <<"submitData">>),
     store_object(Path, Hash, State);
 
-register_object(Path, Hash, State) ->
+register_object(_SPid, Path, Hash, State) ->
     lager:warning("Cannot register objest ~p:~p.", [Path, Hash]),
     State.
 
@@ -334,29 +334,29 @@ extract_object(Hash, #sess_state{obj_tbl=ObjTbl}) ->
     end.
 
 
-fire_event(Session, Hash, EventName) ->
+fire_event(SPid, Hash, EventName) ->
     lager:debug("Fire event ~p.", [EventName]),
     Args = [{<<"name">>, EventName},
             {<<"hash">>, Hash}],
     Message = {event, <<"fireEvent">>, Args},
-    socketio_session:send(Session, Message).
+    socketio_session:send(SPid, Message).
 
 
-fire_data_event(Session, Hash, EventName, EventData) ->
+fire_data_event(SPid, Hash, EventName, EventData) ->
     lager:debug("Fire data event ~p with ~p.", [EventName, EventData]),
     Args = [{<<"name">>, EventName},
             {<<"hash">>, Hash},
             {<<"data">>, EventData}],
     Message = {event, <<"fireDataEvent">>, Args},
-    socketio_session:send(Session, Message).
+    socketio_session:send(SPid, Message).
 
 
-add_event_listener(Session, Hash, EventName) ->
+add_event_listener(SPid, Hash, EventName) ->
     lager:debug("Add event listener ~p.", [EventName]),
     Args = [{<<"name">>, EventName},
             {<<"hash">>, Hash}],
     Message = {event, <<"addListener">>, Args},
-    socketio_session:send(Session, Message).
+    socketio_session:send(SPid, Message).
 
 
 

@@ -117,7 +117,7 @@ qx.Class.define("cascadae.ToolBar",
     this.__mainButtons = new qx.ui.toolbar.Part;
 
     this.__ctrlButtons.add(this.__reconnectBtn);
-    this.__ctrlButtons.add(this.__reloadBtn);
+//  this.__ctrlButtons.add(this.__reloadBtn);
 
     this.__viewButtons.add(this.__peersView);
     this.__viewButtons.add(this.__filesView);

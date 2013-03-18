@@ -92,10 +92,15 @@ qx.Class.define("cascadae.Socket", {
       this.setNamespace(namespace);
     }
     this.__name = [];
+    this.addListener("disconnect", this.__handleDisconnect, this);
+    this.addListener("reconnect", this.__handleReconnect, this);
   },
 
   members:
   {
+    __listeners : [],
+    __objectRegister : [],
+
     /**
      * Trying to using socket.io to connect and plug every event from socket.io to qooxdoo one
      */
@@ -108,8 +113,8 @@ qx.Class.define("cascadae.Socket", {
         'reconnect': this.getReconnect(),
         'connect timeout' : this.getConnectTimeout(),
         'reconnection delay': this.getReconnectionDelay(),
-        'max reconnection attempts': this.getMaxReconnectionAttemps()
-//      'force new connection': true
+        'max reconnection attempts': this.getMaxReconnectionAttemps(),
+        'force new connection': true
       })
       this.setSocket(socket);
       var self = this;
@@ -148,7 +153,25 @@ qx.Class.define("cascadae.Socket", {
     __addListenerFromErlang: function(eventName, objHash)
     {
       var item = qx.core.ObjectRegistry.fromHashCode(objHash);
-      item.addListener(eventName, this.__listener, this);
+      var lid = item.addListener(eventName, this.__handleQxEvent, this);
+      var hash = item.toHashCode();
+      this.__listeners.push({"listener_id": lid, "hash": hash});
+    },
+
+    /**
+     * Cancel listeners added from Erlang for Qooxdoo objects.
+     */
+    __cancelAllListeners: function()
+    {
+      var a = this.__listeners;
+      for (var i = 0; i < a.length; i++)
+      {
+        var info = a[i];
+        var item = qx.core.ObjectRegistry.fromHashCode(info.hash);
+        if (!item) continue;
+        item.removeListenerById(info.listener_id);
+      }
+      this.__listeners = [];
     },
 
     __fireEventFromErlang: function(eventName, objHash)
@@ -167,7 +190,7 @@ qx.Class.define("cascadae.Socket", {
 
 
     /* Receive events from qooxdoo objects */
-    __listener : function(e)
+    __handleQxEvent : function(e)
     {
       var item = e.getTarget();
       var meta = {};
@@ -198,19 +221,22 @@ qx.Class.define("cascadae.Socket", {
     },
 
     /* Initially send information about the object */
-    registerObject : function(item)
+    registerObject : function(item, emitOnly)
     {
+      var hash = item.toHashCode();
       var data = {
-        "hash"      : item.toHashCode(),
+        "hash"      : hash,
         "path"      : item.classname.split(".")
       };
       this.emit("registerObject", data);
+      if (!emitOnly) this.__objectRegister.push(hash);
     },
 
     reconnect : function()
     {
       this.__destroySocket();
       this.connect();
+      this.__handleReconnect();
     },
 
     reload : function()
@@ -234,6 +260,25 @@ qx.Class.define("cascadae.Socket", {
           socket.removeAllListeners(eventName);
         });
         this.setSocket(null);
+      }
+    },
+
+    __handleDisconnect: function()
+    {
+      this.__cancelAllListeners();
+    },
+
+    __handleReconnect: function()
+    {
+      this.info("Handle reconnect.");
+      // Submit registered objects again
+      var a = this.__objectRegister;
+      for (var i = 0; i < a.length; i++)
+      {
+        var hash = a[i],
+            item = qx.core.ObjectRegistry.fromHashCode(hash);
+        this.registerObject(item, true);
+        item.fireEvent("reanimate");
       }
     }
   },

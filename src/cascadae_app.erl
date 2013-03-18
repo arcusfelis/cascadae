@@ -24,7 +24,7 @@ start(_Type, _Args) ->
                       {etag, {attributes, [filepath, filesize, inode, mtime]}}],
     SIOConfig = socketio_session:configure([
             {heartbeat, 5000},
-            {session_timeout, 30000},
+%           {session_timeout, 30000},
             {callback, cascadae_session},
             {protocol, socketio_data_protocol}]),
 

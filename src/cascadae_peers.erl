@@ -6,6 +6,7 @@
         peers = dict:new(), %% dict(Pid => #peer{})
         session_pid,
         session_tag,
+        session_mref,
         torrent_ids,
         update_table_tref,
 
@@ -67,9 +68,11 @@ deactivate(Srv) ->
 
 init([Session, Tag]) ->
     {ok, TRef} = timer:send_interval(5000, update_table),
+    SMRef = monitor(process, Session),
     State = #peers_state{
             session_pid=Session,
             session_tag=Tag,
+            session_mref=SMRef,
             update_table_tref=TRef
             },
     {ok, State}.
@@ -98,7 +101,10 @@ handle_cast(deactivate, State=#peers_state{update_table_tref=TRef}) ->
 
 handle_info(update_table, State) ->
     lager:debug("Handle update_table timeout.", []),
-    {noreply, cron_find_new(State)}.
+    {noreply, cron_find_new(State)};
+handle_info({'DOWN', MRef, process, _, Reason},
+            State=#peers_state{session_mref=MRef}) ->
+    {stop, Reason, State}.
 
 
 terminate(_Reason, _State) ->

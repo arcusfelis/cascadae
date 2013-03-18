@@ -4,6 +4,7 @@
 -record(files_state, {
         session_pid,
         session_tag,
+        session_mref,
         torrent_id,
         files,
         update_tree_tref
@@ -47,9 +48,11 @@ deactivate(Srv) ->
 
 init([Session, Tag]) ->
     {ok, TRef} = timer:send_interval(5000, update_tree),
+    SMRef = monitor(process, Session),
     State = #files_state{
             session_pid=Session,
             session_tag=Tag,
+            session_mref=SMRef,
             update_tree_tref=TRef
             },
     {ok, State}.
@@ -110,7 +113,10 @@ handle_info(update_tree, State) ->
     end,
     Files == Files2
     orelse lager:debug("Diff state changed ~p => ~p.", [Files, Files2]),
-    {noreply, State#files_state{files=Files2}}.
+    {noreply, State#files_state{files=Files2}};
+handle_info({'DOWN', MRef, process, _, Reason},
+            State=#files_state{session_mref=MRef}) ->
+    {stop, Reason, State}.
 
 terminate(_Reason, _State) ->
     ok.
