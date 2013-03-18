@@ -208,12 +208,7 @@ recv(_, _, {event, <<>>, <<"submitData">>, Meta}, State=#sess_state{}) ->
             IsPaused = if Paused -> true; true -> false end,
             [lager:debug("Add ~p on pause.", [Address]) || IsPaused],
             proc_lib:spawn(fun() ->
-                {ok, FileName} = etorrent_magnet:download({address, Address}),
-                case etorrent_ctl:start(FileName, [{paused, IsPaused}]) of
-                    {ok, TorrentID} ->
-                        lager:info("Start torrent #~p from ~p from browser.",
-                                   [TorrentID, FileName])
-                end
+                etorrent_magnet:download({address, Address}, [{paused, IsPaused}])
                 end),
             {ok, State}
     end;
