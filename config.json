@@ -38,7 +38,7 @@
   {
     "APPLICATION"  : "cascadae",
     "QOOXDOO_PATH" : "q_deps/qooxdoo",
-    "QXTHEME"      : "qx.theme.Modern",
+    "QXTHEME"      : "cascadae.theme.Theme",
     "API_EXCLUDE"  : ["qx.test.*", "${APPLICATION}.theme.*", 
         "${APPLICATION}.test.*", "${APPLICATION}.simulation.*"],
     "LOCALES"      : [ "en" ],

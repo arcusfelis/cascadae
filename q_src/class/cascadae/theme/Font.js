@@ -10,6 +10,10 @@
 
 qx.Theme.define("cascadae.theme.Font",
 {
-  extend : qx.theme.modern.Font,
-  fonts  : {}
+//extend : qx.theme.modern.Font,
+  fonts  : {
+    "default" : { },
+    "bold" : { },
+    "small" : { }
+  }
 });

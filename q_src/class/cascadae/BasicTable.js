@@ -158,8 +158,11 @@ qx.Class.define("cascadae.BasicTable",
      */
     particallyUpdateRows : function(Rows)
     {
-      var tm = this.__tableModel;
-      var n2p = this.getColumnNameToPositionIndex();
+      var tm = this.__tableModel,
+          n2p = this.getColumnNameToPositionIndex(),
+          sorting_col = tm.getSortColumnIndex(),
+          is_sorting_asc = tm.isSortAscending(),
+          update_sorting = false;
 
       for (var i=0, count=Rows.length; i<count; i++)
       {
@@ -185,8 +188,13 @@ qx.Class.define("cascadae.BasicTable",
         }
 
         var newValues = qx.lang.Array.clone(oldValues);
-
         newValues = this.fillFields(row, newValues, false);
+
+        // Check, if data in the sorted column was changed.
+        if (!update_sorting && oldValues[sorting_col] != newValues[sorting_col])
+        {
+          update_sorting = true;
+        }
 
         /* There is moment, when pos can be changed as result of sorting. 
            Good practice is to add a mutex, but we just decrease the time
@@ -196,6 +204,9 @@ qx.Class.define("cascadae.BasicTable",
         var pos = tm.locate(n2p.id, row.id);
         tm.setRow(pos, newValues);
       }
+      if (update_sorting)
+        //this.updateContent();
+          tm.sortByColumn(sorting_col, is_sorting_asc);
       this.fireEvent("tableRefreshed");
     },
 
