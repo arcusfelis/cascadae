@@ -18,7 +18,8 @@
     is_peers_active = true,
     is_peers_visible,
     is_page_visible,
-    session_timeout_tref
+    session_timeout_tref,
+    saved_hub_state
 }).
 -define(OBJ_TBL, cascadae_object_register).
 %% The socketio_session has same timeout already, but this timeout is 
@@ -66,15 +67,17 @@ recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
          [<<"cascadae">>,<<"peers">>,<<"Table">>]  when is_pid(PeersPid) ->
             {ok, check_peer_visibility(State#sess_state{is_peers_visible=false})};
          [<<"cascadae">>,<<"Container">>] ->
-            {ok, check_peer_visibility(
-                 check_file_visibility(State#sess_state{is_page_visible=false}))};
+            SavedHubState = cascadae_hub:suspend_handler(),
+            State2 = State#sess_state{is_page_visible=false,
+                                      saved_hub_state=SavedHubState},
+            {ok, check_peer_visibility(check_file_visibility(State2))};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
     end;
 
 recv(SPid, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
-    #sess_state{files_pid=FilesPid} = State,
+    #sess_state{files_pid=FilesPid, saved_hub_state=SavedHubState} = State,
     Hash = proplists:get_value(<<"hash">>, Meta),
     assert_hash(Hash),
     #object{path=Path} = extract_object(Hash, State),
@@ -96,8 +99,11 @@ recv(SPid, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
             {ok, check_peer_visibility(State#sess_state{is_peers_visible=true,
                                                         peers_pid=PeersPid})};
          [<<"cascadae">>,<<"Container">>] ->
-            {ok, check_peer_visibility(
-                 check_file_visibility(State#sess_state{is_page_visible=true}))};
+            [cascadae_hub:resume_handler(SavedHubState)
+             || SavedHubState =/= undefined],
+            State2 = State#sess_state{is_page_visible=true,
+                                      saved_hub_state=undefined},
+            {ok, check_peer_visibility(check_file_visibility(State2))};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
