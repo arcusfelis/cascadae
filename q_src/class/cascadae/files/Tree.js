@@ -5,6 +5,7 @@
 #asset(cascadae/icon/16/files/folder-partical.png)
 #asset(cascadae/icon/16/files/folder-skipped.png)
 #asset(cascadae/icon/16/files/office-skipped.png)
+#asset(qx/icon/Tango/16/mimetypes/office-document.png)
 
 ************************************************************************ */
 
@@ -38,6 +39,7 @@ qx.Class.define("cascadae.files.Tree",
   
   construct : function()
   {
+
     var n2c =
     {
       "name"           : this.tr("Name"),
@@ -106,6 +108,8 @@ qx.Class.define("cascadae.files.Tree",
     this.setAlwaysShowOpenCloseSymbol(true);
     // delay preloading
     qx.event.Timer.once(this.__preloadImages, this, 3000);
+
+    this.setAppearance("file-tree");
   },
 
   members : {

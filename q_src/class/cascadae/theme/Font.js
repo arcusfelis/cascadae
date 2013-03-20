@@ -14,6 +14,7 @@ qx.Theme.define("cascadae.theme.Font",
   fonts  : {
     "default" : { },
     "bold" : { },
-    "small" : { }
+    "small" : { },
+    "headline" : { size: 12 }
   }
 });

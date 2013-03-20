@@ -25,7 +25,7 @@
  */
 qx.Theme.define("cascadae.theme.Color",
 {
-  extend : qx.theme.modern.Color,
+  extend : qx.theme.indigo.Color,
   colors :
   {
     // equal to "background-pane" and "background-odd"

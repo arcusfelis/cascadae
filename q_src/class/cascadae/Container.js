@@ -52,7 +52,6 @@ qx.Class.define("cascadae.Container",
     this.__mainStack.add(this.__table);
     socket.registerObject(this.__table);
 
-
     this.__infosplit = new qx.ui.splitpane.Pane("horizontal");
     this.__infosplit.setDecorator(null);
     this.add(this.__infosplit);
@@ -447,6 +446,7 @@ qx.Class.define("cascadae.Container",
       this.__logTable.setActive(true);
     },
 
+    __focusedWidget: null,
 
     /**
      * TODOC
@@ -455,8 +455,26 @@ qx.Class.define("cascadae.Container",
      */
     setEnabled : function(isEnabled)
     {
+      this.info("setEnabled(" + isEnabled + "), focused widget is " + this.__focusedWidget);
+      cc = this;
+
+      if (!isEnabled)
+      {
+        var fh = qx.ui.core.FocusHandler.getInstance();
+        this.__focusedWidget = fh.getFocusedWidget();
+//      if (this.__focusedWidget) this.__focusedWidget.blur();
+      }
+
       this.__toolBar.setEnabled(isEnabled);
       this.__table.setEnabled(isEnabled);
+
+      if (isEnabled)
+      {
+        var widget = this.__focusedWidget ? this.__focusedWidget : this.__table;
+        widget.blur();
+        widget.focus();
+        this.__focusedWidget = null;
+      } 
     },
 
     __setEnabled : function()

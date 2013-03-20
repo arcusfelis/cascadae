@@ -41,6 +41,9 @@ qx.Class.define("cascadae.Application",
       this.base(arguments);
       this.getRoot().setNativeContextMenu(true);
 
+      // Forward focused state of a tabel to its status bar
+      qx.ui.table.Table.prototype._forwardStates = {focused: true};
+
       // Enable logging in debug variant
 //    if (qx.core.Environment.get("qx.debug"))
 //    {
@@ -64,6 +67,8 @@ qx.Class.define("cascadae.Application",
 
       // Initialize the compositor
       this.__container = new cascadae.Container(this, socket);
+      var fh = qx.ui.core.FocusHandler.getInstance();
+      fh.addRoot(this.__container);
       this.getRoot().add(this.__container, { edge : 0 });
     },
 

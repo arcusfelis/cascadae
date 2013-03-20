@@ -43,7 +43,8 @@
         "${APPLICATION}.test.*", "${APPLICATION}.simulation.*"],
     "LOCALES"      : [ "en" ],
     "CACHE"        : "cache",
-    "ROOT"         : "."
+    "ROOT"         : ".",
+    "BUILD_PATH"   : "priv/html"
   },
 
   // You only need to edit the remainder of this file, if you want to customize
