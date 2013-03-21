@@ -194,7 +194,8 @@ qx.Class.define("cascadae.BasicTable",
       var tm = this.__tableModel,
           n2p = this.getColumnNameToPositionIndex();
 
-
+      tm.saveSelection();
+      console.log("non blocking update start");
       for (var i = 0, l = Math.min(10, this.__rowQueue.length); i < l; i++)
       {
         var row = this.__rowQueue.shift();
@@ -216,8 +217,16 @@ qx.Class.define("cascadae.BasicTable",
         var newValues = qx.lang.Array.clone(oldValues);
         newValues = this.fillFields(row, newValues, false);
         
-        tm.setRow(pos, newValues);
+        tm.setRow(/* rowIndex */ pos,
+                  newValues,
+                  /* view */ undefined,
+                  /* fireEvent */ false,
+                  /* preserveSelection */ false);
       }
+      console.log("non blocking update stop");
+      tm.restoreSelection();
+      tm.forceRedraw();
+      console.log("non blocking update end");
 
       if (this.__rowQueue.length)
       {

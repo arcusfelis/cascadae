@@ -65,5 +65,19 @@ qx.Class.define("cascadae.peers.Table",
     tm.setSortMethods(n2p.ip, cascadae.Helpers.buildIPComparator(n2p.ip));
   },
 
-  members : {}
+  members : {
+    fillFields : function(row, newValues, add)
+    {
+      newValues = this.base(arguments, row, newValues, add);
+      var n2p = this.getColumnNameToPositionIndex();
+
+      if (add)
+      {
+        newValues[n2p.recv_rate] = 0;
+        newValues[n2p.send_rate] = 0;
+      }
+
+      return newValues;
+    }
+  }
 });

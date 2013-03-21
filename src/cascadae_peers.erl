@@ -118,7 +118,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 
 render_ip({A,B,C,D}) ->
-    iolist_to_binary(io_lib:format("~w.~w.~w.~w", [A,B,C,D])).
+    iolist_to_binary(io_lib:format("~3..0B.~3..0B.~3..0B.~3..0B", [A,B,C,D])).
 
 
 to_binary(Term) ->

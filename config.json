@@ -62,7 +62,7 @@
       "library" :
       [
         {
-          "manifest" : "contrib://SmartTableModel/trunk/Manifest.json"
+          "manifest" : "q_deps/SmartTableModel/Manifest.json"
         }
       ]
     },

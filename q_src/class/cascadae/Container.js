@@ -406,8 +406,8 @@ qx.Class.define("cascadae.Container",
       switch(show)
       {
         case "files":
-          this.__stack.setSelection([ this.__filesView ]);
           this.__stack.show();
+          this.__stack.setSelection([ this.__filesView ]);
           this.__filesView.focus();
           isFileViewEnabled = true;
           break;
