@@ -71,6 +71,7 @@ qx.Class.define("cascadae.BasicTable",
     {
       this.addListener(eventName, eventHandlers[eventName], this);
     }
+    this.setAlwaysUpdateCells(false);
   },
 
   members :
@@ -151,6 +152,8 @@ qx.Class.define("cascadae.BasicTable",
     },
 
 
+    __rowQueue : undefined,
+
     /**
      * DATA MANAGEMENT
      *
@@ -158,56 +161,72 @@ qx.Class.define("cascadae.BasicTable",
      */
     particallyUpdateRows : function(Rows)
     {
-      var tm = this.__tableModel,
-          n2p = this.getColumnNameToPositionIndex(),
-          sorting_col = tm.getSortColumnIndex(),
-          is_sorting_asc = tm.isSortAscending(),
-          update_sorting = false;
-
-      for (var i=0, count=Rows.length; i<count; i++)
+      if (!this.__rowQueue) 
       {
-        var row = Rows[i];
-        if (typeof (row.id) == 'undefined') 
-          this.error("Cannot get Rows[i].id");
+        this.__rowQueue = Rows;
+        qx.event.Timer.once(this.__nonBlockingUpdate, this, 1);
+      } else {
+        var idx = {};
+        for (var i = 0, l = this.__rowQueue.length; i < l; i++)
+        {
+            var row = this.__rowQueue[i];
+            idx[row.id] = i;
+        }
+            
+        for (var i = 0, l = Rows.length; i < l; i++)
+        {
+          var row = Rows[i];
+          var oldRowPos = idx[row.id];
+          if (oldRowPos !== undefined)
+          {
+            // previous update is still in queue
+            var oldRow = this.__rowQueue[oldRowPos];
+            qx.lang.Object.mergeWith(oldRow, row);
+          } else {
+            this.__rowQueue.push(Rows[i]);
+          }
+        }
+      }
+    },
 
+    __nonBlockingUpdate : function()
+    {
+      var tm = this.__tableModel,
+          n2p = this.getColumnNameToPositionIndex();
+
+
+      for (var i = 0, l = Math.min(10, this.__rowQueue.length); i < l; i++)
+      {
+        var row = this.__rowQueue.shift();
         var pos = tm.locate(n2p.id, row.id);
-
         if (isNaN(pos))
         {
           this.error("Cannot locate row.");
           continue;
         }
-
+        // Update whole row.
         var oldValues = tm.getRowData(pos,
-        /* view */ undefined, /* copy */ false);
-
+                           /* view */ undefined,
+                           /* copy */ false);
         if (typeof (oldValues) != "object")
         {
           this.error("Cannot retrieve old values.");
           continue;
         }
-
         var newValues = qx.lang.Array.clone(oldValues);
         newValues = this.fillFields(row, newValues, false);
-
-        // Check, if data in the sorted column was changed.
-        if (!update_sorting && oldValues[sorting_col] != newValues[sorting_col])
-        {
-          update_sorting = true;
-        }
-
-        /* There is moment, when pos can be changed as result of sorting. 
-           Good practice is to add a mutex, but we just decrease the time
-           when it can be recalculated.
-           */
-
-        var pos = tm.locate(n2p.id, row.id);
+        
         tm.setRow(pos, newValues);
       }
-      if (update_sorting)
-        //this.updateContent();
-          tm.sortByColumn(sorting_col, is_sorting_asc);
-      this.fireEvent("tableRefreshed");
+
+      if (this.__rowQueue.length)
+      {
+        qx.event.Timer.once(this.__nonBlockingUpdate, this, 4);
+        console.log("Len " + this.__rowQueue.length);
+      } else {
+        this.__rowQueue = undefined;
+        this.fireEvent("tableRefreshed");
+      }
     },
 
     /* The event is from the user. */

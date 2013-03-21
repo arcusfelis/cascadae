@@ -182,8 +182,7 @@ qx.Class.define("cascadae.Socket", {
 
     __fireDataEventFromErlang: function(eventName, objHash, eventData)
     {
-      this.info("fireDataEvent ", eventName);
-      console.dir(eventData);
+//    this.info("fireDataEvent ", eventName);
       var item = qx.core.ObjectRegistry.fromHashCode(objHash);
       item.fireDataEvent(eventName, eventData);
     },
