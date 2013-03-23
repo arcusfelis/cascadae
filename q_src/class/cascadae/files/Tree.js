@@ -61,11 +61,29 @@ qx.Class.define("cascadae.files.Tree",
         i++;
     }
     delete i;
+    var tree = this;
     var paneCon = function(obj) {
-      return new cascadae.Pane(obj);
+      var pane = new cascadae.Pane(obj);
+      // This is useful for debugging.
+      pane.setForceSyncUpdate(true);
+      return pane;
     }
-    var custom = {dataModel: new cascadae.files.Model(), tablePane : paneCon};
+    var dm = new cascadae.files.Model();
+    var custom = {
+        dataModel: dm,
+        tablePane : paneCon
+    };
     this.base(arguments, captions, custom);
+    this.set({
+        alwaysShowOpenCloseSymbol: true,
+        appearance: "file-tree",
+        alwaysUpdateCells: false,
+        // Disable Pane.updateContent call while moving mouse
+        focusCellOnMouseMove: false,
+        forceLineHeight: false,
+        useTreeLines: false,
+        resetSelectionOnHeaderClick: false
+    });
 
     // Highlighting of the focused rows is pretty slow.
     // Disable it.
@@ -99,6 +117,7 @@ qx.Class.define("cascadae.files.Tree",
 
     var sm = this.getSelectionModel();
     sm.setSelectionMode(qx.ui.table.selection.Model.MULTIPLE_INTERVAL_SELECTION);
+    dm.indexedSelection(n2p.id, sm);
 
 
     var dm = this.getDataModel();
@@ -108,15 +127,8 @@ qx.Class.define("cascadae.files.Tree",
     this.addListener("rd_childrenRespond", this.onDataLoad, this);
     this.addListener("rd_dataUpdated", this.onDataUpdated, this);
     
-    this.setAlwaysShowOpenCloseSymbol(true);
     // delay preloading
     qx.event.Timer.once(this.__preloadImages, this, 3000);
-
-    this.setAppearance("file-tree");
-    this.setAlwaysUpdateCells(false);
-    // Disable Pane.updateContent call while moving mouse
-    this.setFocusCellOnMouseMove(false);
-    this.setForceLineHeight(false);
   },
 
   members : {
@@ -145,6 +157,7 @@ qx.Class.define("cascadae.files.Tree",
 
     addRows : function(tid, /*sid*/ parent_sid, rows)
     {
+      this.info("addRows");
       var dm = this.getDataModel();
       var n2p = this.__n2p;
       var ids = this.__ids;
@@ -171,12 +184,15 @@ qx.Class.define("cascadae.files.Tree",
                 default:
                     icon  = "icon/16/mimetypes/office-document.png";
             }
-            var nid = dm.addLeaf(parent_nid, name, icon);
+            var nid = dm.addLeaf(parent_nid, name, icon, icon);
           } else {
             var is_empty = row.capacity == 0;
             var is_open = -1 != this.__openSids[tid].indexOf(sid);
             var icon = this.__folderIcon(mode, is_open);
-            var nid = dm.addBranch(parent_nid, name, is_open, is_empty, icon);
+      this.info("B - addBranch");
+            var nid = dm.addBranch(parent_nid, name, is_open, is_empty,
+                                   icon, icon);
+      this.info("E - addBranch");
           }
         }
         // save indexes
@@ -263,8 +279,8 @@ qx.Class.define("cascadae.files.Tree",
 
     __clearState : function() {
       var tm = this.getDataModel();
-      var sm = this.getSelectionModel();
       tm.clearData();
+      var sm = this.getSelectionModel();
       sm.resetSelection();
       this.__nid2sid = {};
       this.__sid2nid = {};
@@ -291,6 +307,8 @@ qx.Class.define("cascadae.files.Tree",
     onTreeOpenWhileEmpty : function(e)
     {
       var node = e.getData();
+      if (node.type != qx.ui.treevirtual.MTreePrimitive.Type.BRANCH)
+          return;
       var tid = this.getTorrentId();
       var sid = this.__nid2sid[node.nodeId];
       this.getFileTreeNode(tid, [sid]);
@@ -305,6 +323,8 @@ qx.Class.define("cascadae.files.Tree",
     onTreeOpen : function(e)
     {
       var node = e.getData();
+      if (node.type != qx.ui.treevirtual.MTreePrimitive.Type.BRANCH)
+          return;
       this.__updateFolderIcon(node, true);
       var tid = this.getTorrentId();
       var sid = this.__nid2sid[node.nodeId];
@@ -319,6 +339,8 @@ qx.Class.define("cascadae.files.Tree",
     onTreeClose : function(e)
     {
       var node = e.getData();
+      if (node.type != qx.ui.treevirtual.MTreePrimitive.Type.BRANCH)
+          return;
       this.__updateFolderIcon(node, true);
       var tid = this.getTorrentId();
       var sid = this.__nid2sid[node.nodeId];
@@ -617,6 +639,9 @@ qx.Class.define("cascadae.files.Tree",
       var tid = this.getTorrentId(),
            dm = this.getDataModel();
       var dirSids = this.__dirSids;
+      this.info("Saving selection.");
+      var selected = dm.getSelection();
+      this.info("Save selection.");
       this.__clearState();
       this.__dirSids = dirSids;
       // this.__openSids[tid] is the same.
@@ -630,8 +655,10 @@ qx.Class.define("cascadae.files.Tree",
         this.addRows(tid, parent_sid, rows); 
       }
 
+      console.dir(selected);
       // update data in the table 
       dm.setData();
+      dm.setSelection(selected);
     },
 
     _applyTorrentId: function(value, old, name)
@@ -643,6 +670,7 @@ qx.Class.define("cascadae.files.Tree",
     updateData : function()
     {
       this.__clearState();
+
       var tid = this.getTorrentId();
       if (typeof(this.__openSids[tid]) == "undefined") {
         this.__openSids[tid] = [0];

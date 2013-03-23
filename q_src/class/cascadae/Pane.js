@@ -94,7 +94,6 @@ qx.Class.define("cascadae.Pane",
       apply : "_applyFirstVisibleRow"
     },
 
-
     /** The number of rows to show. */
     visibleRowCount :
     {
@@ -119,6 +118,12 @@ qx.Class.define("cascadae.Pane",
     allowShrinkX :
     {
       refine : true,
+      init : false
+    },
+
+    forceSyncUpdate :
+    {
+      check : "Boolean",
       init : false
     }
   },
@@ -312,7 +317,7 @@ qx.Class.define("cascadae.Pane",
      */
     __rowCacheClear : function()
     {
-      this.info("Clear cache");
+//    this.info("Clear cache");
       this.__rowCache = [];
       this.__rowCacheCount = 0;
     },
@@ -381,34 +386,35 @@ qx.Class.define("cascadae.Pane",
      */
     updateContent : function(completeUpdate, scrollOffset, onlyRow, onlySelectionOrFocusChanged)
     {
-      var updateNow = completeUpdate || onlyRow || onlySelectionOrFocusChanged; 
-      // If there is an old timer and we will update the timer or redraw whole
-      // table, then delete the old timer.
-      if (this.__updateTRef && (!updateNow || completeUpdate)) {
-        clearTimeout(this.__updateTRef); 
-        this.info("Cancel TO."); 
+      if (!this.getTable().isVisible())
+      {
+//      this.info("Invisible");
+        return;
       }
+      if (completeUpdate)
+      {
+        this.__rowCacheClear();
+      }
+      var updateNow = this.getForceSyncUpdate() || onlyRow || onlySelectionOrFocusChanged; 
       if (updateNow)
-      { 
-        this.doUpdateContent(completeUpdate, scrollOffset, onlyRow, 
-                             onlySelectionOrFocusChanged); 
+      {
+        this.doUpdateContent(scrollOffset, onlyRow, onlySelectionOrFocusChanged); 
       } else {
+        if (this.__updateTRef) {
+          clearTimeout(this.__updateTRef); 
+//        this.info("Cancel TO."); 
+        }
         var pane = this;
         var cb = function() {
-            pane.doUpdateContent(completeUpdate, scrollOffset, onlyRow, 
-                                 onlySelectionOrFocusChanged); 
+            pane.doUpdateContent(scrollOffset, onlyRow, onlySelectionOrFocusChanged); 
           };
-        this.__updateTRef = setTimeout(cb, 1);
+        this.__updateTRef = setTimeout(cb, 100);
       }
     },
 
-    doUpdateContent : function(completeUpdate, scrollOffset, onlyRow, onlySelectionOrFocusChanged)
+    doUpdateContent : function(scrollOffset, onlyRow, onlySelectionOrFocusChanged)
     {
-      if (completeUpdate) {
-        this.__rowCacheClear();
-      }
-
-      var start = new Date();
+//    var start = new Date();
 
       if (scrollOffset && Math.abs(scrollOffset) <= Math.min(10, this.getVisibleRowCount()))
       {
@@ -422,11 +428,11 @@ qx.Class.define("cascadae.Pane",
       }
       else
       {
-        this.debug("full update");
+//      this.debug("full update");
         this._updateAllRows();
       }
 
-      this.debug("render time: " + (new Date() - start) + "ms");
+//    this.debug("render time: " + (new Date() - start) + "ms");
     },
 
 
@@ -544,7 +550,7 @@ qx.Class.define("cascadae.Pane",
         var focusedRow = (this.__focusedRow == row);
         var rowData = tableModel.getRowData(row, undefined, false); // readonly
         var rowId = tableModel.getRowId(rowData);
-        var rowVersion = tableModel.getRowVersion(rowData);
+        var rowVersion = tableModel.getRowVersion(rowData, firstRow, rowCount);
 
         var cachedRow = this.__rowCacheGet(rowId, rowVersion, selected, focusedRow);
         if (cachedRow) {
@@ -709,6 +715,7 @@ qx.Class.define("cascadae.Pane",
 
 
     __hasAppearListener : false,
+    __lastModelRowCount : 0,
 
     /**
      * Updates the content of the pane (implemented using array joins).
@@ -723,12 +730,22 @@ qx.Class.define("cascadae.Pane",
           this.addListenerOnce("appear", arguments.callee, this);
           this.__hasAppearListener = true;
         }
+//      this.debug("skip invisible");
         return;
       }
 
       var table = this.getTable();
 
       var tableModel = table.getTableModel();
+
+      var modelRowCount = tableModel.getRowCount();
+      if (modelRowCount === 0 && this.__lastModelRowCount === 0)
+      {
+//      this.debug("skip empty");
+        return;
+      }
+
+      this.__lastModelRowCount = modelRowCount;
       var paneModel = this.getPaneScroller().getTablePaneModel();
 
       var colCount = paneModel.getColumnCount();
@@ -736,7 +753,6 @@ qx.Class.define("cascadae.Pane",
       var firstRow = this.getFirstVisibleRow();
 
       var rowCount = this.getVisibleRowCount();
-      var modelRowCount = tableModel.getRowCount();
 
       if (firstRow + rowCount > modelRowCount) {
         rowCount = Math.max(0, modelRowCount - firstRow);

@@ -47,6 +47,10 @@ qx.Class.define("cascadae.BasicTable",
           return new cascadae.Pane(obj);
         }
     });
+    this.set({
+      alwaysUpdateCells: false,
+      showCellFocusIndicator: false
+    });
 
     // INIT SELECTION MODEL
     var sm = this.__selectionModel = this.getSelectionModel();
@@ -74,7 +78,6 @@ qx.Class.define("cascadae.BasicTable",
     {
       this.addListener(eventName, eventHandlers[eventName], this);
     }
-    this.setAlwaysUpdateCells(false);
   },
 
   members :
@@ -197,15 +200,15 @@ qx.Class.define("cascadae.BasicTable",
       var tm = this.__tableModel,
           n2p = this.getColumnNameToPositionIndex();
 
-      tm.saveSelection();
-      console.log("non blocking update start");
+      var selected = tm.getSelection();
+//    console.log("non blocking update start");
       for (var i = 0, l = Math.min(10, this.__rowQueue.length); i < l; i++)
       {
         var row = this.__rowQueue.shift();
         var pos = tm.locate(n2p.id, row.id);
         if (isNaN(pos))
         {
-          this.error("Cannot locate row.");
+          this.error("Cannot locate row " + row.id);
           continue;
         }
         // Update whole row.
@@ -226,15 +229,18 @@ qx.Class.define("cascadae.BasicTable",
                   /* fireEvent */ false,
                   /* preserveSelection */ false);
       }
-      console.log("non blocking update stop");
-      tm.restoreSelection();
+//    console.log("non blocking update stop");
+      if (!qx.lang.Array.equals(selected, tm.getSelection()))
+      {
+        tm.restoreSelection();
+      }
       tm.forceRedraw();
-      console.log("non blocking update end");
+//    console.log("non blocking update end");
 
       if (this.__rowQueue.length)
       {
         qx.event.Timer.once(this.__nonBlockingUpdate, this, 4);
-        console.log("Len " + this.__rowQueue.length);
+//      console.log("Len " + this.__rowQueue.length);
       } else {
         this.__rowQueue = undefined;
         this.fireEvent("tableRefreshed");
