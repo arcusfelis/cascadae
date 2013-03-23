@@ -17,7 +17,7 @@ qx.Class.define("cascadae.cellrenderer.Size",
      * @return {var} TODOC
      */
     _getContentHtml : function(cellInfo) {
-      return this.bytesToSize(cellInfo.rowData[cellInfo.col], 2);
+      return this.__bytesToSize(cellInfo.rowData[cellInfo.col], 2);
     },
 
     // overridden
@@ -39,25 +39,20 @@ qx.Class.define("cascadae.cellrenderer.Size",
      * @param precision {var} TODOC
      * @return {var} string
      */
-    bytesToSize : function(bytes, precision)
+    __bytesToSize : function(bytes, precision)
     {
       var kilobyte = 1024;
-      var megabyte = kilobyte * 1024;
-      var gigabyte = megabyte * 1024;
-      var terabyte = gigabyte * 1024;
+      var megabyte = 1048576;
+      var gigabyte = 1073741824;
 
-      if ((bytes >= 0) && (bytes < kilobyte)) {
+      if (bytes < kilobyte) {
         return bytes + ' B';
-      } else if ((bytes >= kilobyte) && (bytes < megabyte)) {
+      } else if (/* (bytes >= kilobyte) && */ (bytes < megabyte)) {
         return (bytes / kilobyte).toFixed(precision) + ' KB';
-      } else if ((bytes >= megabyte) && (bytes < gigabyte)) {
+      } else if (/* (bytes >= megabyte) && */ (bytes < gigabyte)) {
         return (bytes / megabyte).toFixed(precision) + ' MB';
-      } else if ((bytes >= gigabyte) && (bytes < terabyte)) {
+      } else /* if ( (bytes >= gigabyte)) */ {
         return (bytes / gigabyte).toFixed(precision) + ' GB';
-      } else if (bytes >= terabyte) {
-        return (bytes / terabyte).toFixed(precision) + ' TB';
-      } else {
-        return bytes + ' B';
       }
     }
   }

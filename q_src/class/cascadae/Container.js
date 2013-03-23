@@ -406,8 +406,8 @@ qx.Class.define("cascadae.Container",
       switch(show)
       {
         case "files":
-          this.__stack.show();
           this.__stack.setSelection([ this.__filesView ]);
+          this.__stack.show();
           this.__filesView.focus();
           isFileViewEnabled = true;
           break;
@@ -439,7 +439,6 @@ qx.Class.define("cascadae.Container",
           this.__table.focus();
       }
 
-      this.__filesTree.setActive(isFileViewEnabled);
       this.__filesTree.setActive(isFileViewEnabled);
       this.__wishesList.setActive(isWishViewEnabled);
       this.__peersTable.setActive(isPeerViewEnabled);

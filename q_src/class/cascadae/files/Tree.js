@@ -61,9 +61,12 @@ qx.Class.define("cascadae.files.Tree",
         i++;
     }
     delete i;
-    
-    var custom = {dataModel: new cascadae.files.Model()};
+    var paneCon = function(obj) {
+      return new cascadae.Pane(obj);
+    }
+    var custom = {dataModel: new cascadae.files.Model(), tablePane : paneCon};
     this.base(arguments, captions, custom);
+
     // Highlighting of the focused rows is pretty slow.
     // Disable it.
     this.highlightFocusedRow(false);
@@ -110,6 +113,10 @@ qx.Class.define("cascadae.files.Tree",
     qx.event.Timer.once(this.__preloadImages, this, 3000);
 
     this.setAppearance("file-tree");
+    this.setAlwaysUpdateCells(false);
+    // Disable Pane.updateContent call while moving mouse
+    this.setFocusCellOnMouseMove(false);
+    this.setForceLineHeight(false);
   },
 
   members : {

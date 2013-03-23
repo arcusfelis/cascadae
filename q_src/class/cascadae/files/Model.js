@@ -9,6 +9,7 @@ qx.Class.define("cascadae.files.Model",
 
   members : {
     __columnIndex : -1,
+    __keyColumn : 1,
     __asc : true,
 
     isColumnSortable : function(columnIndex) {
@@ -52,6 +53,14 @@ qx.Class.define("cascadae.files.Model",
         };
       this.fireDataEvent("sorted", data);
       this.fireEvent("metaDataChanged");
+    },
+
+    getRowId : function(row) {
+        return row[this.__keyColumn];
+    },
+
+    getRowVersion : function(row) {
+        return row[4] + row[5]; // progress + mode
     },
 
     sortRows : function(rows) {

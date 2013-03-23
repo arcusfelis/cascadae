@@ -42,6 +42,9 @@ qx.Class.define("cascadae.BasicTable",
     this.base(arguments, this.__tableModel, {
         tableColumnModel : function(obj) {
           return new qx.ui.table.columnmodel.Resize(obj);
+        },
+        tablePane : function(obj) {
+          return new cascadae.Pane(obj);
         }
     });
 
