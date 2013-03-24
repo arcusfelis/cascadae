@@ -473,11 +473,11 @@ qx.Class.define("cascadae.BasicTable",
      */
     updateFilters : function() 
     {
-      this.info("change selection");
       var tm = this.__tableModel; 
 
       var newSel = this.__mainTable.getSelectedIds();
       if (qx.lang.Array.equals(this._oldSelection, newSel)) return;
+      this.info("change selection");
       this.fireDataEvent("d_updateFilters", {"torrent_ids": newSel});
 
       this._oldSelection = qx.lang.Array.clone(newSel);

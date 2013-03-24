@@ -157,7 +157,6 @@ qx.Class.define("cascadae.files.Tree",
 
     addRows : function(tid, /*sid*/ parent_sid, rows)
     {
-      this.info("addRows");
       var dm = this.getDataModel();
       var n2p = this.__n2p;
       var ids = this.__ids;
@@ -189,10 +188,8 @@ qx.Class.define("cascadae.files.Tree",
             var is_empty = row.capacity == 0;
             var is_open = -1 != this.__openSids[tid].indexOf(sid);
             var icon = this.__folderIcon(mode, is_open);
-      this.info("B - addBranch");
             var nid = dm.addBranch(parent_nid, name, is_open, is_empty,
                                    icon, icon);
-      this.info("E - addBranch");
           }
         }
         // save indexes
@@ -639,9 +636,7 @@ qx.Class.define("cascadae.files.Tree",
       var tid = this.getTorrentId(),
            dm = this.getDataModel();
       var dirSids = this.__dirSids;
-      this.info("Saving selection.");
       var selected = dm.getSelection();
-      this.info("Save selection.");
       this.__clearState();
       this.__dirSids = dirSids;
       // this.__openSids[tid] is the same.
@@ -655,7 +650,6 @@ qx.Class.define("cascadae.files.Tree",
         this.addRows(tid, parent_sid, rows); 
       }
 
-      console.dir(selected);
       // update data in the table 
       dm.setData();
       dm.setSelection(selected);

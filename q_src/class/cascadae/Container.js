@@ -30,9 +30,6 @@ qx.Class.define("cascadae.Container",
     this.__application = app;
     this._initializeCommands();
 
-    socket.addListener("connect", this.__setEnabled, this);
-    socket.addListener("disconnect", this.__setDisabled, this);
-
     // Create header
     this.__header = new cascadae.Header();
     this.add(this.__header, { edge : "north" });
@@ -47,10 +44,6 @@ qx.Class.define("cascadae.Container",
     this.__stack.exclude();
 
     this.__mainStack = new qx.ui.container.Stack;
-    this.__table = new cascadae.Table();
-    this.__socket.addListener("rd_logEvent", this.__table.logHandler, this.__table);
-    this.__mainStack.add(this.__table);
-    socket.registerObject(this.__table);
 
     this.__infosplit = new qx.ui.splitpane.Pane("horizontal");
     this.__infosplit.setDecorator(null);
@@ -58,11 +51,6 @@ qx.Class.define("cascadae.Container",
 
     this.__infosplit.add(this.__mainStack, 2);
     this.__infosplit.add(this.__stack, 1);
-
-    this._initToolbarButtonActivation();
-//  this._initToolbarFileButtonActivation();
-
-    this.setEnabled(false);
 
     // Set "dead" zones (never will get focus)
     this.__header.setKeepFocus(true);
@@ -103,29 +91,67 @@ qx.Class.define("cascadae.Container",
 
     finalize : function()
     {
-      var container = this;
+      qx.event.Timer.once(this._initToolBar, this, 100);
+    },
 
+    _initToolBar: function()
+    {
+      this.__toolBar.finalize();
+      qx.event.Timer.once(this._initMainTable, this, 100);
+    },
+
+    _initMainTable: function()
+    {
+      var socket = this.__socket;
+      this.__table = new cascadae.Table();
+      this.__socket.addListener("rd_logEvent", this.__table.logHandler, this.__table);
+      this.__mainStack.add(this.__table);
+      socket.registerObject(this.__table);
+
+      this.setEnabled(false);
+
+      socket.addListener("connect", this.__setEnabled, this);
+      socket.addListener("disconnect", this.__setDisabled, this);
+
+      this._initToolbarButtonActivation();
+//    this._initToolbarFileButtonActivation();
       // Do heavy calculations in idle time
       // document.setTimeout
-      qx.event.Timer.once(container._initViews, container, 3000);
+      qx.event.Timer.once(this._initViews, this, 3000);
     },
 
     _initViews : function()
     {
-      if (!this.__table) throw("Init the main table first!");
+      if (!this.__table) {
+        // main table is not ready
+        qx.event.Timer.once(this._initViews, this, 3000);
+        return;
+      }
 
       this.__peersTable = new cascadae.peers.Table();
       this.__peersTable.initFilters(this.__table);
       this.__socket.registerObject(this.__peersTable);
+      qx.event.Timer.once(this._initViews2, this, 300);
+    },
 
+    _initViews2 : function()
+    {
       this.__logTable = new cascadae.log.Table();
       this.__logTable.initFilters(this.__table);
       this.__socket.registerObject(this.__logTable);
       this.__socket.addListener("rd_logEvent", this.__logTable.logHandler, this.__logTable);
+      qx.event.Timer.once(this._initViews3, this, 300);
+    },
 
+    _initViews3 : function()
+    {
       this.__filesTree = new cascadae.files.Tree();
       this.__socket.registerObject(this.__filesTree);
+      qx.event.Timer.once(this._initViews4, this, 300);
+    },
 
+    _initViews4 : function()
+    {
       // There is property binding here.
       // If table.torrentId will changed, than __filesTree.torrentId will be
       // changed too.
@@ -168,18 +194,24 @@ qx.Class.define("cascadae.Container",
       });
     },  
 
+    __lastButtonSetName : "torrent_table",
     __focusInHandler : function(e)
     {
       var t = e.getTarget();
       var n = this.getName(t);
-      this.__toolBar.activate(n);
+      if (n && this.__lastButtonSetName != n)
+      {
+        this.__toolBar.deactivate(this.__lastButtonSetName);
+        this.__toolBar.activate(n);
+        this.__lastButtonSetName = n;
+      }
     },
 
     __focusOutHandler : function(e)
     {
-      var t = e.getTarget();
-      var n = this.getName(t);
-      this.__toolBar.deactivate(n);
+//    var t = e.getTarget();
+//    var n = this.getName(t);
+//    this.__toolBar.deactivate(n);
     },
 
     getName: function(t)

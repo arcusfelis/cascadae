@@ -57,111 +57,118 @@ qx.Class.define("cascadae.ToolBar",
   {
     this.base(arguments);
     this.__controller = controller;
-
-    this.__reconnectBtn = new qx.ui.toolbar.Button(this.tr("Reconnect"), 
-      "icon/22/devices/network-wired.png");
-    this.__reconnectBtn.setCommand(controller.getCommand("reconnect"));
-
-    this.__reloadBtn = new qx.ui.toolbar.Button(this.tr("Refresh"), 
-      "icon/22/actions/view-refresh.png");
-    this.__reloadBtn.setCommand(controller.getCommand("reload"));
-
-    // Add/Remove buttons
-    this.__addBtn = new qx.ui.toolbar.Button(this.tr("Add"), 
-      "icon/22/actions/list-add.png");
-    this.__addBtn.setCommand(controller.getCommand("addTorrent"));
-
-    this.__removeBtn = new qx.ui.toolbar.Button(this.tr("Remove"), 
-      "icon/22/actions/list-remove.png");
-    this.__removeBtn.setCommand(controller.getCommand("removeSelectedRows"));
-
-    this.__startBtn = new qx.ui.toolbar.Button(this.tr("Start"), 
-      "icon/22/actions/media-playback-start.png");
-    this.__startBtn.setCommand(controller.getCommand("startSelectedRows"));
-
-    this.__stopBtn = new qx.ui.toolbar.Button(this.tr("Pause"), 
-      "icon/22/actions/media-playback-pause.png");
-    this.__stopBtn.setCommand(controller.getCommand("stopSelectedRows"));
-
-    this.__wishBtn = new qx.ui.toolbar.Button(this.tr("Wish files"), 
-      "icon/22/actions/dialog-apply.png");
-    this.__wishBtn.setCommand(controller.getCommand("wishSelectedFiles"));
-
-    this.__skipBtn = new qx.ui.toolbar.Button(this.tr("Skip files"), 
-      "icon/22/actions/dialog-close.png");
-    this.__skipBtn.setCommand(controller.getCommand("skipSelectedFiles"));
-
-    this.__unskipBtn = new qx.ui.toolbar.Button(this.tr("Unskip files"), 
-      "icon/22/actions/dialog-cancel.png");
-    this.__unskipBtn.setCommand(controller.getCommand("unskipSelectedFiles"));
-
-    this.__peersView = new qx.ui.toolbar.RadioButton(this.tr("Peers"), 
-      "icon/22/apps/preferences-users.png");
-    this.__peersView.setUserData("value", "peers");
-
-    this.__filesView = new qx.ui.toolbar.RadioButton(this.tr("Files"), 
-      "icon/22/places/folder-open.png");
-    this.__filesView.setUserData("value", "files");
-
-    this.__wishesView = new qx.ui.toolbar.RadioButton(this.tr("Wishes"), 
-      "icon/22/actions/view-sort-descending.png");
-    this.__wishesView.setUserData("value", "wishlist");
-
-    this.__logView = new qx.ui.toolbar.RadioButton(this.tr("Log"), 
-      "icon/22/apps/utilities-log-viewer.png");
-    this.__logView.setUserData("value", "log");
-
-    this.__ctrlButtons = new qx.ui.toolbar.Part;
-    this.__viewButtons = new qx.ui.toolbar.Part;
-    this.__fileButtons = new qx.ui.toolbar.Part;
-    this.__mainButtons = new qx.ui.toolbar.Part;
-
-    this.__ctrlButtons.add(this.__reconnectBtn);
-//  this.__ctrlButtons.add(this.__reloadBtn);
-
-    this.__viewButtons.add(this.__peersView);
-    this.__viewButtons.add(this.__filesView);
-    this.__viewButtons.add(this.__wishesView);
-    this.__viewButtons.add(this.__logView);
-
-    this.__viewGroup = new qx.ui.form.RadioGroup;
-    this.__viewGroup.setAllowEmptySelection(true);
-    this.__viewGroup.add(this.__logView);
-    this.__viewGroup.add(this.__filesView);
-    this.__viewGroup.add(this.__wishesView);
-    this.__viewGroup.add(this.__peersView);
-    this.__viewGroup.addListener("changeSelection", controller.syncStackView, 
-      controller);
-
-    this.__fileButtons.add(this.__wishBtn);
-    this.__fileButtons.add(this.__skipBtn);
-    this.__fileButtons.add(this.__unskipBtn);
-
-//  this.__mainButtons.add(this.__removeBtn);
-    this.__mainButtons.add(this.__addBtn);
-    this.__mainButtons.add(this.__startBtn);
-    this.__mainButtons.add(this.__stopBtn);
-
-    this.add(this.__ctrlButtons);
-    this.add(this.__mainButtons);
-    this.__spacer = this.addSpacer();
-    this.add(this.__viewButtons);
-
-
-    this.__addRadioCommand("showPeerView", this.__peersView);
-    this.__addRadioCommand("showFileView", this.__filesView);
-    this.__addRadioCommand("showWishView", this.__wishesView);
-    this.__addRadioCommand("showLogView",  this.__logView);
-
-    this.enableRowButtons(false);
-    this.enableFileRowButtons(false);
-    this.activate("torrent_table");
   },
 
   members :
   {
     __isRowButtonsEnabled : false,
     __isFileRowButtonsEnabled : false,
+
+    finalize : function()
+    {
+      var controller = this.__controller;
+
+      this.__reconnectBtn = new qx.ui.toolbar.Button(this.tr("Reconnect"), 
+        "icon/22/devices/network-wired.png");
+      this.__reconnectBtn.setCommand(controller.getCommand("reconnect"));
+ 
+      this.__reloadBtn = new qx.ui.toolbar.Button(this.tr("Refresh"), 
+        "icon/22/actions/view-refresh.png");
+      this.__reloadBtn.setCommand(controller.getCommand("reload"));
+ 
+      // Add/Remove buttons
+      this.__addBtn = new qx.ui.toolbar.Button(this.tr("Add"), 
+        "icon/22/actions/list-add.png");
+      this.__addBtn.setCommand(controller.getCommand("addTorrent"));
+ 
+      this.__removeBtn = new qx.ui.toolbar.Button(this.tr("Remove"), 
+        "icon/22/actions/list-remove.png");
+      this.__removeBtn.setCommand(controller.getCommand("removeSelectedRows"));
+ 
+      this.__startBtn = new qx.ui.toolbar.Button(this.tr("Start"), 
+        "icon/22/actions/media-playback-start.png");
+      this.__startBtn.setCommand(controller.getCommand("startSelectedRows"));
+ 
+      this.__stopBtn = new qx.ui.toolbar.Button(this.tr("Pause"), 
+        "icon/22/actions/media-playback-pause.png");
+      this.__stopBtn.setCommand(controller.getCommand("stopSelectedRows"));
+ 
+      this.__wishBtn = new qx.ui.toolbar.Button(this.tr("Wish files"), 
+        "icon/22/actions/dialog-apply.png");
+      this.__wishBtn.setCommand(controller.getCommand("wishSelectedFiles"));
+ 
+      this.__skipBtn = new qx.ui.toolbar.Button(this.tr("Skip files"), 
+        "icon/22/actions/dialog-close.png");
+      this.__skipBtn.setCommand(controller.getCommand("skipSelectedFiles"));
+ 
+      this.__unskipBtn = new qx.ui.toolbar.Button(this.tr("Unskip files"), 
+        "icon/22/actions/dialog-cancel.png");
+      this.__unskipBtn.setCommand(controller.getCommand("unskipSelectedFiles"));
+ 
+      this.__peersView = new qx.ui.toolbar.RadioButton(this.tr("Peers"), 
+        "icon/22/apps/preferences-users.png");
+      this.__peersView.setUserData("value", "peers");
+ 
+      this.__filesView = new qx.ui.toolbar.RadioButton(this.tr("Files"), 
+        "icon/22/places/folder-open.png");
+      this.__filesView.setUserData("value", "files");
+ 
+      this.__wishesView = new qx.ui.toolbar.RadioButton(this.tr("Wishes"), 
+        "icon/22/actions/view-sort-descending.png");
+      this.__wishesView.setUserData("value", "wishlist");
+ 
+      this.__logView = new qx.ui.toolbar.RadioButton(this.tr("Log"), 
+        "icon/22/apps/utilities-log-viewer.png");
+      this.__logView.setUserData("value", "log");
+ 
+      this.__ctrlButtons = new qx.ui.toolbar.Part;
+      this.__viewButtons = new qx.ui.toolbar.Part;
+      this.__fileButtons = new qx.ui.toolbar.Part;
+      this.__mainButtons = new qx.ui.toolbar.Part;
+ 
+      this.__ctrlButtons.add(this.__reconnectBtn);
+//    this.__ctrlButtons.add(this.__reloadBtn);
+ 
+      this.__viewButtons.add(this.__peersView);
+      this.__viewButtons.add(this.__filesView);
+      this.__viewButtons.add(this.__wishesView);
+      this.__viewButtons.add(this.__logView);
+ 
+      this.__viewGroup = new qx.ui.form.RadioGroup;
+      this.__viewGroup.setAllowEmptySelection(true);
+      this.__viewGroup.add(this.__logView);
+      this.__viewGroup.add(this.__filesView);
+      this.__viewGroup.add(this.__wishesView);
+      this.__viewGroup.add(this.__peersView);
+      this.__viewGroup.addListener("changeSelection", controller.syncStackView, 
+        controller);
+ 
+      this.__fileButtons.add(this.__wishBtn);
+      this.__fileButtons.add(this.__skipBtn);
+      this.__fileButtons.add(this.__unskipBtn);
+ 
+//    this.__mainButtons.add(this.__removeBtn);
+      this.__mainButtons.add(this.__addBtn);
+      this.__mainButtons.add(this.__startBtn);
+      this.__mainButtons.add(this.__stopBtn);
+ 
+      this.add(this.__ctrlButtons);
+      this.add(this.__mainButtons);
+      this.__spacer = this.addSpacer();
+      this.add(this.__viewButtons);
+ 
+ 
+      this.__addRadioCommand("showPeerView", this.__peersView);
+      this.__addRadioCommand("showFileView", this.__filesView);
+      this.__addRadioCommand("showWishView", this.__wishesView);
+      this.__addRadioCommand("showLogView",  this.__logView);
+ 
+      this.enableRowButtons(false);
+      this.enableFileRowButtons(false);
+      this.activate("torrent_table");
+
+      this.setEnabled(false);
+    },
 
 
     __addRadioCommand : function(name, btn)
