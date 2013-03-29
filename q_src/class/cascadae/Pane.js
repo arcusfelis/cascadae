@@ -524,6 +524,7 @@ qx.Class.define("cascadae.Pane",
       var colCount = paneModel.getColumnCount();
       var left = 0;
       var cols = [];
+      var colNums = [];
 
       // precompute column properties
       for (var x=0; x<colCount; x++)
@@ -540,6 +541,7 @@ qx.Class.define("cascadae.Pane",
         });
 
         left += cellWidth;
+        colNums.push(col);
       }
 
       var rowsArr = [];
@@ -550,7 +552,7 @@ qx.Class.define("cascadae.Pane",
         var focusedRow = (this.__focusedRow == row);
         var rowData = tableModel.getRowData(row, undefined, false); // readonly
         var rowId = tableModel.getRowId(rowData);
-        var rowVersion = tableModel.getRowVersion(rowData, firstRow, rowCount);
+        var rowVersion = tableModel.getRowVersion(rowData, colNums);
 
         var cachedRow = this.__rowCacheGet(rowId, rowVersion, selected, focusedRow);
         if (cachedRow) {

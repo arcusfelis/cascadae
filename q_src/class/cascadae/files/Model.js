@@ -79,15 +79,19 @@ qx.Class.define("cascadae.files.Model",
         return row[this.__keyColumn];
     },
 
-    getRowVersion : function(row, firstRow, rowCount) {
-        if (firstRow)
-        {
-          // Called from the metadata pane
-          return "" + row[4] + row[5]; // progress + mode
-        } else {
-          // Called from the tree pane
-          return "" + row[0].bOpened + row[0].icon;
-        }
+    getRowVersion : function(row, colNums) {
+        var version = "";
+        // Called from the tree pane
+        if (~colNums.indexOf(0))
+            version += row[0].bOpened + row[0].icon;
+
+        // Called from the metadata pane
+        if (~colNums.indexOf(4))
+          version += row[4]; // progress
+        if (~colNums.indexOf(5))
+          version += row[5]; // mode
+
+        return version;
     },
 
     sortRows : function(rows) {
