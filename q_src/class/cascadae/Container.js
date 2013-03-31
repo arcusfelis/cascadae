@@ -152,6 +152,14 @@ qx.Class.define("cascadae.Container",
 
     _initViews4 : function()
     {
+      this.__trackersTable = new cascadae.trackers.Table();
+      this.__trackersTable.initFilters(this.__table);
+      this.__socket.registerObject(this.__trackersTable);
+      qx.event.Timer.once(this._initViews5, this, 300);
+    },
+
+    _initViews5 : function()
+    {
       // There is property binding here.
       // If table.torrentId will changed, than __filesTree.torrentId will be
       // changed too.
@@ -166,16 +174,19 @@ qx.Class.define("cascadae.Container",
       this.__filesView = this.__filesTree;
       this.__wishesView = this.__wishesList;
       this.__peersView = this.__peersTable;
+      this.__trackersView = this.__trackersTable;
       this.__logView = this.__logTable;
  
       this.__stack.add(this.__filesView);
       this.__stack.add(this.__wishesView);
       this.__stack.add(this.__peersView);
       this.__stack.add(this.__logView);
+      this.__stack.add(this.__trackersTable);
 
       this.__regFocusHandlers([ this.__table
                               , this.__filesTree 
                               , this.__peersTable 
+                              , this.__trackersTable
                               , this.__logTable   
                               , this.__wishesList
                               ]);
@@ -221,6 +232,7 @@ qx.Class.define("cascadae.Container",
              (t == this.__peersTable)  ? "peer_table"    : 
              (t == this.__logTable)    ? "log_table"     : 
              (t == this.__wishesList)  ? "wish_list"     : 
+             (t == this.__trackersTable)  ? "tracker_table"    : 
              "unknown";
     },
 
@@ -386,6 +398,9 @@ qx.Class.define("cascadae.Container",
       commands.showLogView = new qx.ui.core.Command("Control+Shift+L");
       commands.showLogView.setToolTipText("Control+Shift+L");
 
+      commands.showTrackersView = new qx.ui.core.Command("Control+Shift+T");
+      commands.showTrackersView.setToolTipText("Control+Shift+T");
+
       commands.showFileView = new qx.ui.core.Command("Control+Shift+F");
       commands.showFileView.setToolTipText("Control+Shift+F");
 
@@ -433,6 +448,7 @@ qx.Class.define("cascadae.Container",
       var isFileViewEnabled = false;
       var isWishViewEnabled = false;
       var isPeerViewEnabled = false;
+      var isTrackerViewEnabled = false;
       this.info("Select view " + show);
 
       switch(show)
@@ -459,6 +475,13 @@ qx.Class.define("cascadae.Container",
           isPeerViewEnabled = true;
           break;
 
+        case "trackers":
+          this.__stack.setSelection([ this.__trackersView ]);
+          this.__stack.show();
+          this.__trackersView.focus();
+          isTrackerViewEnabled = true;
+          break;
+
         case "log":
           this.__stack.setSelection([ this.__logView ]);
           this.__stack.show();
@@ -474,6 +497,7 @@ qx.Class.define("cascadae.Container",
       this.__filesTree.setActive(isFileViewEnabled);
       this.__wishesList.setActive(isWishViewEnabled);
       this.__peersTable.setActive(isPeerViewEnabled);
+      this.__trackersTable.setActive(isTrackerViewEnabled);
       this.__logTable.setActive(true);
     },
 

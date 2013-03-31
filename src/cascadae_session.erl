@@ -17,6 +17,9 @@
     peers_pid,
     is_peers_active = true,
     is_peers_visible,
+    trackers_pid,
+    is_trackers_active = true,
+    is_trackers_visible,
     is_page_visible,
     session_timeout_tref,
     saved_hub_state
@@ -57,7 +60,8 @@ recv(_SPid, _Sid, {message, <<>>, _Message}, State = #sess_state{}) ->
     {ok, State};
 
 recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
-    #sess_state{files_pid=FilesPid, peers_pid=PeersPid} = State,
+    #sess_state{files_pid=FilesPid, peers_pid=PeersPid,
+                trackers_pid=TrackersPid} = State,
     Hash = proplists:get_value(<<"hash">>, Meta),
     assert_hash(Hash),
     #object{path=Path} = extract_object(Hash, State),
@@ -66,11 +70,16 @@ recv(_, _, {event, <<>>, <<"deactivated">>, Meta}=Mess, State) ->
             {ok, check_file_visibility(State#sess_state{is_files_visible=false})};
          [<<"cascadae">>,<<"peers">>,<<"Table">>]  when is_pid(PeersPid) ->
             {ok, check_peer_visibility(State#sess_state{is_peers_visible=false})};
+         [<<"cascadae">>,<<"trackers">>,<<"Table">>]  when is_pid(TrackersPid) ->
+            {ok, check_tracker_visibility(
+                    State#sess_state{is_trackers_visible=false})};
          [<<"cascadae">>,<<"Container">>] ->
             SavedHubState = cascadae_hub:suspend_handler(),
             State2 = State#sess_state{is_page_visible=false,
                                       saved_hub_state=SavedHubState},
-            {ok, check_peer_visibility(check_file_visibility(State2))};
+            {ok, check_tracker_visibility(
+                    check_peer_visibility(
+                        check_file_visibility(State2)))};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
@@ -98,12 +107,27 @@ recv(SPid, _, {event, <<>>, <<"activated">>, Meta}=Mess, State) ->
                 end,
             {ok, check_peer_visibility(State#sess_state{is_peers_visible=true,
                                                         peers_pid=PeersPid})};
+         [<<"cascadae">>,<<"trackers">>,<<"Table">>] ->
+            %% It is only meaningful, if nothing is selected.
+            %% Start here.
+            TrackersPid = %% try start
+                case State#sess_state.trackers_pid of
+                    undefined ->
+                        {ok, Pid} = cascadae_trackers:start_link(SPid,
+                                         {trackers, Hash}),
+                        Pid;
+                    Pid -> Pid
+                end,
+            {ok, check_tracker_visibility(State#sess_state{
+                        is_trackers_visible=true, trackers_pid=TrackersPid})};
          [<<"cascadae">>,<<"Container">>] ->
             [cascadae_hub:resume_handler(SavedHubState)
              || SavedHubState =/= undefined],
             State2 = State#sess_state{is_page_visible=true,
                                       saved_hub_state=undefined},
-            {ok, check_peer_visibility(check_file_visibility(State2))};
+            {ok, check_tracker_visibility(
+                    check_peer_visibility(
+                        check_file_visibility(State2)))};
          _ ->
             lager:debug("Ignore ~p.", [Mess]),
             {ok, State}
@@ -260,6 +284,20 @@ handle_info(SPid, _, {{peers, Hash}, What}, State=#sess_state{})
                             [{<<"rows">>, Rows}])
     end,
     {ok, State};
+handle_info(SPid, _, {{trackers, Hash}, What}, State=#sess_state{})
+    when is_binary(Hash) ->
+    case What of
+        {diff_list, Rows} ->
+            fire_data_event(SPid, Hash, <<"rd_dataUpdated">>,
+                            [{<<"rows">>, Rows}]);
+        {add_list, Rows} ->
+            fire_data_event(SPid, Hash, <<"rd_dataAdded">>,
+                            [{<<"rows">>, Rows}]);
+        {delete_list, Rows} ->
+            fire_data_event(SPid, Hash, <<"rd_dataRemoved">>,
+                            [{<<"rows">>, Rows}])
+    end,
+    {ok, State};
 handle_info(SPid, _, {{files, Hash}, What}, State=#sess_state{}) ->
     case What of
         {add_list, TorrentID, Nodes} ->
@@ -316,6 +354,12 @@ register_object(SPid, Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
     store_object(Path, Hash, State);
 
 register_object(SPid, Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
+    add_event_listener(SPid, Hash, <<"activated">>),
+    add_event_listener(SPid, Hash, <<"deactivated">>),
+    add_event_listener(SPid, Hash, <<"d_updateFilters">>),
+    store_object(Path, Hash, State);
+
+register_object(SPid, Path=[<<"cascadae">>,<<"trackers">>,<<"Table">>], Hash, State) ->
     add_event_listener(SPid, Hash, <<"activated">>),
     add_event_listener(SPid, Hash, <<"deactivated">>),
     add_event_listener(SPid, Hash, <<"d_updateFilters">>),
@@ -443,4 +487,23 @@ check_peer_visibility(State) ->
                [State#sess_state.is_page_visible,
                 State#sess_state.is_peers_visible,
                 State#sess_state.is_peers_active]),
+    State.
+
+
+check_tracker_visibility(State=#sess_state{is_page_visible=true,
+                                           is_trackers_visible=true,
+                                           is_trackers_active=false,
+                                           trackers_pid=TrackerPid}) ->
+    cascadae_trackers:activate(TrackerPid),
+    State#sess_state{is_trackers_active=true};
+check_tracker_visibility(State=#sess_state{is_trackers_active=true,
+                                           trackers_pid=TrackerPid}) ->
+    cascadae_trackers:deactivate(TrackerPid),
+    State#sess_state{is_trackers_active=false};
+check_tracker_visibility(State) ->
+    lager:info("Check visibility failed, page visible = ~p, "
+               "trackers visible = ~p, trackers process active = ~p.",
+               [State#sess_state.is_page_visible,
+                State#sess_state.is_trackers_visible,
+                State#sess_state.is_trackers_active]),
     State.

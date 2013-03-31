@@ -32,6 +32,9 @@
 // Files
 #asset(qx/icon/Tango/22/places/folder-open.png)
 
+// Trackers
+#asset(qx/icon/Tango/22/places/network-server.png)
+
 ************************************************************************ */
 
 /**
@@ -109,6 +112,10 @@ qx.Class.define("cascadae.ToolBar",
         "icon/22/apps/preferences-users.png");
       this.__peersView.setUserData("value", "peers");
  
+      this.__trackersView = new qx.ui.toolbar.RadioButton(this.tr("Trackers"), 
+        "icon/22/places/network-server.png");
+      this.__trackersView.setUserData("value", "trackers");
+ 
       this.__filesView = new qx.ui.toolbar.RadioButton(this.tr("Files"), 
         "icon/22/places/folder-open.png");
       this.__filesView.setUserData("value", "files");
@@ -130,16 +137,18 @@ qx.Class.define("cascadae.ToolBar",
 //    this.__ctrlButtons.add(this.__reloadBtn);
  
       this.__viewButtons.add(this.__peersView);
+      this.__viewButtons.add(this.__trackersView);
       this.__viewButtons.add(this.__filesView);
       this.__viewButtons.add(this.__wishesView);
       this.__viewButtons.add(this.__logView);
- 
+
       this.__viewGroup = new qx.ui.form.RadioGroup;
       this.__viewGroup.setAllowEmptySelection(true);
-      this.__viewGroup.add(this.__logView);
+      this.__viewGroup.add(this.__peersView);
+      this.__viewGroup.add(this.__trackersView);
       this.__viewGroup.add(this.__filesView);
       this.__viewGroup.add(this.__wishesView);
-      this.__viewGroup.add(this.__peersView);
+      this.__viewGroup.add(this.__logView);
       this.__viewGroup.addListener("changeSelection", controller.syncStackView, 
         controller);
  
@@ -162,6 +171,7 @@ qx.Class.define("cascadae.ToolBar",
       this.__addRadioCommand("showFileView", this.__filesView);
       this.__addRadioCommand("showWishView", this.__wishesView);
       this.__addRadioCommand("showLogView",  this.__logView);
+      this.__addRadioCommand("showTrackersView", this.__trackersView);
  
       this.enableRowButtons(false);
       this.enableFileRowButtons(false);
