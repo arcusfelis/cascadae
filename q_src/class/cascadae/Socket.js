@@ -77,7 +77,14 @@ qx.Class.define("cascadae.Socket", {
       nullable:   false,
       init:       1000,
       check:      "Number"
-    }
+    },
+
+
+    connected:
+    {
+      init:       false,
+      check:      "Boolean"
+    },
   },
 
   /** Constructor
@@ -92,14 +99,20 @@ qx.Class.define("cascadae.Socket", {
       this.setNamespace(namespace);
     }
     this.__name = [];
+    this.__objectRegister = [];
+    this.__propertyRegister = [];
+    this.__listeners = [];
     this.addListener("disconnect", this.__handleDisconnect, this);
     this.addListener("reconnect", this.__handleReconnect, this);
+    this.addListener("connect", this.__handleConnect, this);
   },
 
   members:
   {
-    __listeners : [],
-    __objectRegister : [],
+    __name : null,
+    __listeners : null,
+    __objectRegister : null,
+    __propertyRegister : null,
 
     /**
      * Trying to using socket.io to connect and plug every event from socket.io to qooxdoo one
@@ -191,6 +204,9 @@ qx.Class.define("cascadae.Socket", {
     /* Receive events from qooxdoo objects */
     __handleQxEvent : function(e)
     {
+      if (!this.isConnected())
+        return;
+
       var item = e.getTarget();
       var meta = {};
       meta.hash = item.toHashCode();
@@ -200,6 +216,7 @@ qx.Class.define("cascadae.Socket", {
           meta.data = e.getData();
           break;
       }
+      this.info("Emit " + e.getType() + " for " + meta.hash + " (data = " + meta.data + ")");
       this.emit(e.getType(), meta);
     },
 
@@ -229,6 +246,45 @@ qx.Class.define("cascadae.Socket", {
       };
       this.emit("registerObject", data);
       if (!emitOnly) this.__objectRegister.push(hash);
+    },
+
+    addRemoteListener : function(item, eventName)
+    {
+      item.addListener(eventName, this.__handleQxEvent, this);
+    },
+
+    bindRemoteProperty : function(item, propertyName)
+    {
+      // property descriptor
+      var prop = qx.util.OOUtil.getPropertyDefinition(item.constructor, propertyName);
+      if (!prop.event) {
+          this.error("Define field \"event\" in the property description.");
+          return;
+      }
+      item.addListener(prop.event, this.__handleQxEvent, this);
+      var p = {"item" : item,
+               "propertyName": propertyName,
+               "defaultValue": prop.init,
+               "eventName": prop.event};
+      this.__propertyRegister.push(p);
+      if (this.isConnected())
+        this.__syncPropertyValue(p);
+    },
+
+    __syncPropertyValue: function(p)
+    {
+      var curValue = p.item.get(p.propertyName);
+      if (p.defaultValue != curValue)
+      {
+        // see __handleQxEvent
+        var meta = {};
+        meta.hash = p.item.toHashCode();
+        meta.data = curValue;
+        // Imitate a call of the event
+        meta.synthetic = true;
+        this.info("Init " + p.eventName + " for " + meta.hash + " (data = " + meta.data + ")");
+        this.emit(p.eventName, meta);
+      }
     },
 
     reconnect : function()
@@ -264,21 +320,32 @@ qx.Class.define("cascadae.Socket", {
 
     __handleDisconnect: function()
     {
+      this.setConnected(false);
       this.__cancelAllListeners();
+    },
+
+    __handleConnect: function()
+    {
+      this.setConnected(true);
     },
 
     __handleReconnect: function()
     {
+      this.setConnected(true);
       this.info("Handle reconnect.");
       // Submit registered objects again
-      var a = this.__objectRegister;
-      for (var i = 0; i < a.length; i++)
+      var os = this.__objectRegister;
+      for (var i = 0, l = os.length; i < l; i++)
       {
-        var hash = a[i],
+        var hash = os[i],
             item = qx.core.ObjectRegistry.fromHashCode(hash);
         this.registerObject(item, true);
-        item.fireEvent("reanimate");
+//      item.fireEvent("reanimate");
       }
+
+      var ps = this.__propertyRegister;
+      for (var i = 0, l = ps.length; i < l; i++)
+        this.__syncPropertyValue(ps[i]);
     }
   },
 

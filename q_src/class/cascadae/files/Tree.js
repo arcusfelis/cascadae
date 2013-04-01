@@ -33,6 +33,15 @@ qx.Class.define("cascadae.files.Tree",
       init:       null,
       check:      "Number",
       apply:      "_applyTorrentId"
+    },
+
+    active:
+    {
+      nullable:   false,
+      init:       false,
+      check:      "Boolean",
+      event:      "changeActive",
+      apply:      "_applyActive"
     }
   },
 
@@ -285,16 +294,10 @@ qx.Class.define("cascadae.files.Tree",
     },
 
 
-    setActive : function(bActive) {
-      if (bActive == this.__active)
-          return;
-
-      // is visable
-      this.__active = bActive;
-      if (bActive && this.__dirty) 
+    _applyActive : function(value, old, name) {
+      if (value && this.__dirty) 
         this.updateData();
       this.__dirty = false;
-      this.fireEvent(this.__active ? "activated" : "deactivated");
     },
 
 

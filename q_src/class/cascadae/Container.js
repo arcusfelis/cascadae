@@ -9,9 +9,20 @@ qx.Class.define("cascadae.Container",
   {
     "activated"          : "qx.event.type.Event",
     "deactivated"        : "qx.event.type.Event",
-    "r_checkVisibility"  : "qx.event.type.Event"
+    "r_checkVisibility"  : "qx.event.type.Event",
+    "changePageVisible"  : "qx.event.type.Data"
   },
 
+  properties:
+  {
+    pageVisible:
+    {
+      nullable:   false,
+      init:       true,
+      check:      "Boolean",
+      event:      "changePageVisible"
+    }
+  },
 
 
   /*
@@ -58,10 +69,11 @@ qx.Class.define("cascadae.Container",
 
     this.__pageVisibility = qx.bom.PageVisibility.getInstance();
     this.__pageVisibility.addListener("change",
-                                      this.__checkPageVisibility,
+                                      this.__onPageVisibilityChange,
                                       this);
-    this.addListener("r_checkVisibility", this.__checkPageVisibility, this);
+    this.__onPageVisibilityChange();
     socket.registerObject(this);
+    socket.bindRemoteProperty(this, "pageVisible");
   },
 
   members :
@@ -76,12 +88,9 @@ qx.Class.define("cascadae.Container",
     __viewLoaded : false,
     __activeView : "",
 
-    __checkPageVisibility: function()
+    __onPageVisibilityChange: function()
     {
-      if (this.__pageVisibility.isHidden())
-        this.fireEvent("deactivated");
-      else
-        this.fireEvent("activated");
+      this.setPageVisible(!this.__pageVisibility.isHidden());
     },
 
     getRoot : function()
@@ -131,6 +140,7 @@ qx.Class.define("cascadae.Container",
       this.__peersTable = new cascadae.peers.Table();
       this.__peersTable.initFilters(this.__table);
       this.__socket.registerObject(this.__peersTable);
+      this.__socket.bindRemoteProperty(this.__peersTable, "active");
       qx.event.Timer.once(this._initViews2, this, 300);
     },
 
@@ -147,6 +157,7 @@ qx.Class.define("cascadae.Container",
     {
       this.__filesTree = new cascadae.files.Tree();
       this.__socket.registerObject(this.__filesTree);
+      this.__socket.bindRemoteProperty(this.__filesTree, "active");
       qx.event.Timer.once(this._initViews4, this, 300);
     },
 
@@ -155,6 +166,7 @@ qx.Class.define("cascadae.Container",
       this.__trackersTable = new cascadae.trackers.Table();
       this.__trackersTable.initFilters(this.__table);
       this.__socket.registerObject(this.__trackersTable);
+      this.__socket.bindRemoteProperty(this.__trackersTable, "active");
       qx.event.Timer.once(this._initViews5, this, 300);
     },
 

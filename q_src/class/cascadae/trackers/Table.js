@@ -68,10 +68,20 @@ qx.Class.define("cascadae.trackers.Table",
 
     __toDate : function(diff)
     {
-      if (diff === undefined) return;
-      var d = new Date();
-      d.setSeconds(d.getSeconds() - diff);
-      return d;
+      var out;
+      switch (typeof(diff))
+      {
+        case "number":
+          out = new Date();
+          out.setSeconds(out.getSeconds() - diff);
+          break;
+
+        case "undefined":
+        case "object": // Date
+          out = diff;
+      }
+      this.info("__toDate(" + diff + ") = " + out);
+      return out;
     }
   }
 });

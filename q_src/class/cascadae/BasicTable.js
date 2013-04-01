@@ -87,7 +87,6 @@ qx.Class.define("cascadae.BasicTable",
     __columnNums : null,
     __columnNames : null,
     __columnCaptions : null,
-    __active : false,
     // Is this widget newer activated?
     __virgin : true,
     // If true, than the data must be reloaded, when the table will be active
@@ -284,7 +283,7 @@ qx.Class.define("cascadae.BasicTable",
 
       this.debug("Bulk update.");
 
-      this.__tableModel.addRows(rows, /* copy */ true, /* fireEvent */ false);
+      this.__tableModel.addRows(rows, /* copy */ false, /* fireEvent */ false);
 
       this.updateContent();
       this.getPaneScroller(0).updateVerScrollBarMaximum();
@@ -344,21 +343,9 @@ qx.Class.define("cascadae.BasicTable",
      */
     __onDataLoadCompleted : function( /* qx.event.type.Data */ event)
     {
+      this.info("__onDataLoadCompleted");
+      this.__tableModel.clearAllRows(true);
       var data = event.getData();
-
-      try
-      {
-        this.__tableModel.removeRows(
-        /* startIndex */ 0,
-        /* howMany */ undefined,
-        /* view */ undefined,
-        /* fireEvent */ false);
-      }
-      catch(err)
-      {
-        this.debug("Is the table empty?");
-      }
-
       if (data.rows.length) this.addRows(data.rows);
     },
 
@@ -442,18 +429,12 @@ qx.Class.define("cascadae.BasicTable",
       return (this._oldSelection.indexOf(tid) != -1);
     },
 
-    setActive : function(bActive) {
-      if (bActive == this.__active)
-          return;
-
-      // is visable
-      this.__active = bActive;
-      if (bActive && this.__dirty) 
+    _applyActive : function(value, old, name) {
+      if (value && this.__dirty) 
         this.updateFilters();
       this.__dirty = false;
-      this.fireEvent(this.__active ? "activated" : "deactivated");
 
-      this.info("Activate peer table " + this.__active);
+      this.info("Activate peer table " + value);
       if (this.__virgin)
       {
         this.fireDataEvent("d_updateFilters",
@@ -463,7 +444,7 @@ qx.Class.define("cascadae.BasicTable",
     },
 
     _changeMainTableSelection: function(e) {
-      if (this.__active) this.updateFilters();
+      if (this.getActive()) this.updateFilters();
       else this.__dirty = true;
     },
 
@@ -504,8 +485,6 @@ qx.Class.define("cascadae.BasicTable",
      * </ul>
      */
     "d_updateFilters"      : "qx.event.type.Data",
-    "activated"            : "qx.event.type.Event",
-    "deactivated"          : "qx.event.type.Event",
 
     // Data in the table model was changed
     "tableRefreshed"       : "qx.event.type.Event",
@@ -552,5 +531,17 @@ qx.Class.define("cascadae.BasicTable",
      * </ul>
      */
     "rd_dataUpdated"       : "qx.event.type.Data"
+  },
+
+  properties:
+  {
+    active:
+    {
+      nullable:   false,
+      init:       false,
+      check:      "Boolean",
+      event:      "changeActive",
+      apply:      "_applyActive"
+    }
   }
 });

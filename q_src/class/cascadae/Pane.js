@@ -406,7 +406,7 @@ qx.Class.define("cascadae.Pane",
         }
         var pane = this;
         var cb = function() {
-            pane.doUpdateContent(scrollOffset, onlyRow, onlySelectionOrFocusChanged); 
+            pane.doUpdateContent(null, null, false); 
           };
         this.__updateTRef = setTimeout(cb, 100);
       }

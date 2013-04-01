@@ -83,6 +83,7 @@ handle_call(_Request, _From, State) ->
 handle_cast({set_torrent_list, NewTorrentIDs}, State) ->
     {noreply, set_torrent_list_int(NewTorrentIDs, State)};
 handle_cast(activate, State=#trackers_state{update_table_tref=undefined}) ->
+    self() ! update_table,
     {ok, TRef} = timer:send_interval(5000, update_table),
     lager:info("Activate ~p.", [TRef]),
     {noreply, State#trackers_state{update_table_tref=TRef}};
@@ -134,7 +135,7 @@ set_torrent_list_int(NewTorrentIds, S=#trackers_state{ttids=OldSTT,
 cron_find_new(S=#trackers_state{ttids=OldSTT}) ->
     TT  = etorrent_tracker:all_torrent_and_tracker_ids(),
     STT = lists:usort(TT),
-    {DeletedTT, AddedTT} = ordsets_diff(OldSTT, STT),
+    {DeletedTT, AddedTT} = cascadae_lib:ordsets_diff(OldSTT, STT),
     S1 = S#trackers_state{ttids=STT},
     S2 = viz_delete_trackers(DeletedTT, S1),
     S3 = viz_add_trackers(AddedTT, S2),
@@ -195,33 +196,7 @@ filter_visible_trackers(AddedTT, []) ->
     AddedTT;
 filter_visible_trackers(AddedTT, VizTorrents) ->
     lager:info("Filter visible trackers, visible torrents are ~p.", [VizTorrents]),
-    orddict_with_set_intersection(AddedTT, VizTorrents).
-
-orddict_with_set_intersection([{K,V}|Dict], [K|Set]) ->
-    [{K,V}|orddict_with_set_intersection(Dict, Set)];
-orddict_with_set_intersection([{DK,_V}|Dict], [SK|_]=Set) when DK < SK ->
-    %% Skip {DK,V}
-    orddict_with_set_intersection(Dict, Set);
-orddict_with_set_intersection([_|_]=Dict, [_|Set]) ->
-    %% Skip SK
-     orddict_with_set_intersection(Dict, Set);
-orddict_with_set_intersection(_, _) ->
-     [].
-
-
-
-ordsets_diff(Olds, News) ->
-    ordsets_diff(Olds, News, [], []).
-
-ordsets_diff([X|Olds], [X|News], Added, Deleted) ->
-    ordsets_diff(Olds, News, Added, Deleted);
-ordsets_diff([Old|Olds], [New|News], Added, Deleted) when Old < New ->
-    ordsets_diff(Olds, [New|News], Added, [Old|Deleted]);
-ordsets_diff([Old|Olds], [New|News], Added, Deleted) ->
-    ordsets_diff([Old|Olds], News, [New|Added], Deleted);
-ordsets_diff(Olds, News, Added, Deleted) ->
-    {lists:reverse(Deleted, Olds), lists:reverse(Added, News)}.
-
+    cascadae_lib:orddict_with_set_intersection(AddedTT, VizTorrents).
 
 
 tracker_list(TTs, S) ->
@@ -250,7 +225,7 @@ get_tracker(TorrentID, TrackerID, S=#trackers_state{trackers=Trackers}) ->
                             proplists:get_value(tracker_url, PL))}
                 ,{tier_num, proplists:get_value(tier_num, PL)}
 
-                ,{message_level, atom_to_binary(Lvl, utf8)}
+                ,{message_level, atom_to_binary(Lvl, latin1)}
                 ,{message, Message}
                 ,{last_announced, seconds_diff_from_now(Announced)}
                 ,{last_attempted, seconds_diff_from_now(Attempted)}
@@ -332,7 +307,8 @@ diff_tracker(_TorrentID, TrackerID, OldTracker) ->
                     } = OldTracker,
                     Diff = [{id, TrackerID}]
                         ++ [{message, Message} || OldMessage =/= Message]
-                        ++ [{message_level, Lvl} || OldLvl =/= Lvl]
+                        ++ [{message_level, atom_to_binary(Lvl, latin1)}
+                            || OldLvl =/= Lvl]
                         ++ [{last_attempted, seconds_diff_from_now(Attempted)}
                             || OldAttempted =/= Attempted]
                         ++ [{last_announced, seconds_diff_from_now(Announced)}

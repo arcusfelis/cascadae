@@ -84,14 +84,15 @@ handle_call(_Request, _From, State) ->
 handle_cast({set_torrent_list, NewTorrentIDs}, State) ->
     {noreply, set_torrent_list_int(NewTorrentIDs, State)};
 handle_cast(activate, State=#peers_state{update_table_tref=undefined}) ->
+    self() ! update_table,
     {ok, TRef} = timer:send_interval(5000, update_table),
     lager:info("Activate ~p.", [TRef]),
     {noreply, State#peers_state{update_table_tref=TRef}};
 handle_cast(activate, State=#peers_state{}) ->
-    lager:info("Skip activation.", []),
+    lager:info("Skip activation."),
     {noreply, State};
 handle_cast(deactivate, State=#peers_state{update_table_tref=undefined}) ->
-    lager:info("Skip deactivation.", []),
+    lager:info("Skip deactivation."),
     {noreply, State};
 handle_cast(deactivate, State=#peers_state{update_table_tref=TRef}) ->
     lager:info("Deactivate ~p.", [TRef]),
@@ -147,7 +148,7 @@ set_torrent_list_int(NewTorrentIds, S=#peers_state{tid_pids=OldSTP,
 cron_find_new(S=#peers_state{tid_pids=OldSTP}) ->
     {value, TP} = etorrent_table:all_tid_and_pids(),
     STP = lists:usort(TP),
-    {DeletedTP, AddedTP} = ordsets_diff(OldSTP, STP),
+    {DeletedTP, AddedTP} = cascadae_lib:ordsets_diff(OldSTP, STP),
     S1 = S#peers_state{tid_pids=STP},
     S2 = viz_delete_peers(DeletedTP, S1),
     S3 = viz_add_peers(AddedTP, S2),
@@ -207,52 +208,23 @@ filter_visible_peers(AddedTP, []) ->
     AddedTP;
 filter_visible_peers(AddedTP, VizTorrents) ->
     lager:info("Filter visible peers, visible torrents are ~p.", [VizTorrents]),
-    orddict_with_set_intersection(AddedTP, VizTorrents).
-
-orddict_with_set_intersection([{K,V}|Dict], [K|Set]) ->
-    [{K,V}|orddict_with_set_intersection(Dict, Set)];
-orddict_with_set_intersection([{DK,_V}|Dict], [SK|_]=Set) when DK < SK ->
-    %% Skip {DK,V}
-    orddict_with_set_intersection(Dict, Set);
-orddict_with_set_intersection([_|_]=Dict, [_|Set]) ->
-    %% Skip SK
-     orddict_with_set_intersection(Dict, Set);
-orddict_with_set_intersection(_, _) ->
-     [].
-
-
-
-ordsets_diff(Olds, News) ->
-    ordsets_diff(Olds, News, [], []).
-
-ordsets_diff([X|Olds], [X|News], Added, Deleted) ->
-    ordsets_diff(Olds, News, Added, Deleted);
-ordsets_diff([Old|Olds], [New|News], Added, Deleted) when Old < New ->
-    ordsets_diff(Olds, [New|News], Added, [Old|Deleted]);
-ordsets_diff([Old|Olds], [New|News], Added, Deleted) ->
-    ordsets_diff([Old|Olds], News, [New|Added], Deleted);
-ordsets_diff(Olds, News, Added, Deleted) ->
-    {lists:reverse(Deleted, Olds), lists:reverse(Added, News)}.
+    cascadae_lib:orddict_with_set_intersection(AddedTP, VizTorrents).
     
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-    
-ordsets_diff_test_() ->
-    [?_assertEqual({[1],[]},       ordsets_diff([1,2,3], [2,3]))
-    ,?_assertEqual({[],[1,5]},     ordsets_diff([2,3], [1,2,3,5]))
-    ,?_assertEqual({[],[1,5,6,7]}, ordsets_diff([2,3], [1,2,3,5,6,7]))
-    ,?_assertEqual({[],[1,2,3]},   ordsets_diff([], [1,2,3]))
-    ,?_assertEqual({[1,2,3],[]},   ordsets_diff([1,2,3], []))
-    ,?_assertEqual({[4],[1,5]},    ordsets_diff([2,3,4], [1,2,3,5]))
-    ].
+peers() ->
+    [{1,list_to_pid("<0.11147.1>")},{1,list_to_pid("<0.14344.15>")},
+     {1,list_to_pid("<0.14357.15>")},{1,list_to_pid("<0.14366.15>")},
+     {1,list_to_pid("<0.14375.15>")},{1,list_to_pid("<0.14393.15>")},
+     {1,list_to_pid("<0.14402.15>")},{1,list_to_pid("<0.14410.15>")},
+     {1,list_to_pid("<0.14426.15>")},{1,list_to_pid("<0.14446.15>")},
+     {1,list_to_pid("<0.14456.15>")},{1,list_to_pid("<0.14467.15>")},
+     {1,list_to_pid("<0.14492.15>")},{1,list_to_pid("<0.14503.15>")},
+     {1,list_to_pid("<0.14635.15>")},{1,list_to_pid("<0.14973.15>")}].
 
-orddict_with_set_intersection_test_() ->
-    [?_assertEqual([{2,b}],        orddict_with_set_intersection([{1,a},{2,b}], [2,3]))
-    ,?_assertEqual([{1,a},{2,b}],  orddict_with_set_intersection([{1,a},{2,b}], [1,2,3]))
-    ,?_assertEqual([],             orddict_with_set_intersection([{1,a},{2,b}], []))
-    ,?_assertEqual([],             orddict_with_set_intersection([], [2,3]))
-    ,?_assertEqual([],             orddict_with_set_intersection([{4,d}], [2,3]))
+filter_visible_peers_test_() ->
+    [?_assertEqual(peers(), filter_visible_peers(peers(), [1]))
     ].
 
 -endif.
