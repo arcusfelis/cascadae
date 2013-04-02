@@ -62,6 +62,17 @@ qx.Class.define("cascadae.ToolBar",
     this.__controller = controller;
   },
 
+
+  properties:
+  {
+    enabled:
+    {
+      refine:     true,
+      init:       false
+    }
+  },
+
+
   members :
   {
     __isRowButtonsEnabled : false,
@@ -177,7 +188,7 @@ qx.Class.define("cascadae.ToolBar",
       this.enableFileRowButtons(false);
       this.activate("torrent_table");
 
-      this.setEnabled(false);
+      this.addListener("changeEnabled", this._onChangeEnabled, this);
     },
 
 
@@ -239,19 +250,20 @@ qx.Class.define("cascadae.ToolBar",
     /**
      * TODOC
      *
-     * @param flag {Boolean} TODOC
+     * @param bEnabled {Boolean} TODOC
      */
-    setEnabled : function(flag)
+    _onChangeEnabled : function(e)
     {
+      var isEnabled = e.getData();
       [ this.__addBtn, this.__reloadBtn ].map(function(x) {
-        x.setEnabled(flag);
+        x.setEnabled(isEnabled);
       });
 
-      if (flag == this.__isRowButtonsEnabled) 
-        this.__enableRowButtons(flag);
+      if (isEnabled == this.__isRowButtonsEnabled) 
+        this.__enableRowButtons(isEnabled);
 
-      if (flag == this.__isFileRowButtonsEnabled) 
-        this.__enableFileRowButtons(flag);
+      if (isEnabled == this.__isFileRowButtonsEnabled) 
+        this.__enableFileRowButtons(isEnabled);
     },
 
 

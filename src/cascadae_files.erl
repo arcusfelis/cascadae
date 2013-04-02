@@ -47,13 +47,12 @@ deactivate(Srv) ->
 %% ------------------------------------------------------------------
 
 init([Session, Tag]) ->
-    {ok, TRef} = timer:send_interval(5000, update_tree),
+    lager:info("Start cascadae_files."),
     SMRef = monitor(process, Session),
     State = #files_state{
             session_pid=Session,
             session_tag=Tag,
-            session_mref=SMRef,
-            update_tree_tref=TRef
+            session_mref=SMRef
             },
     {ok, State}.
 

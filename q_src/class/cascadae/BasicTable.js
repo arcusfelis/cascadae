@@ -344,7 +344,7 @@ qx.Class.define("cascadae.BasicTable",
     __onDataLoadCompleted : function( /* qx.event.type.Data */ event)
     {
       this.info("__onDataLoadCompleted");
-      this.__tableModel.clearAllRows(true);
+      this.__tableModel.clearAllRows(false);
       var data = event.getData();
       if (data.rows.length) this.addRows(data.rows);
     },

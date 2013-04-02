@@ -147,7 +147,6 @@ qx.Class.define("cascadae.files.Tree",
     __sid2nid : {},
     __openSids : [],
     __dirSids : [],
-    __active : false,
     // If true, than the data must be reloaded, when the table will be active
     // again.
     __dirty : false,
@@ -660,7 +659,7 @@ qx.Class.define("cascadae.files.Tree",
 
     _applyTorrentId: function(value, old, name)
     {
-      if (this.__active) this.updateData();
+      if (this.isActive()) this.updateData();
       else this.__dirty = true;
     },
 

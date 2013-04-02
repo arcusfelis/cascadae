@@ -83,7 +83,8 @@ qx.Class.define("cascadae.Socket", {
     connected:
     {
       init:       false,
-      check:      "Boolean"
+      check:      "Boolean",
+      event:      "changeConnected"
     },
   },
 

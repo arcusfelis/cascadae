@@ -66,13 +66,11 @@ deactivate(Srv) ->
 
 init([Session, Tag]) ->
     lager:info("Start cascadae_trackers."),
-    {ok, TRef} = timer:send_interval(5000, update_table),
     SMRef = monitor(process, Session),
     State = #trackers_state{
             session_pid=Session,
             session_tag=Tag,
-            session_mref=SMRef,
-            update_table_tref=TRef
+            session_mref=SMRef
             },
     {ok, State}.
 
@@ -180,7 +178,10 @@ viz_add_trackers(AddedTT, S=#trackers_state{cl_ttids=OldClSTT,
             NewClSTT = ordsets:union(OldClSTT, VizAddedSTT),
             lager:info("Add ~p to the client tracker table.", [VizAddedSTT]),
             {List, S1} = tracker_list(VizAddedSTT, S),
-            push_to_client({add_list, List}, S),
+            case OldVizSTT of
+                [_|_] -> push_to_client({add_list, List}, S);
+                []    -> push_to_client({set_list, List}, S)
+            end,
             NewVizSTT = ordsets:union(OldVizSTT, VizAddedSTT),
             S1#trackers_state{cl_ttids=NewClSTT, viz_ttids=NewVizSTT}
     end.

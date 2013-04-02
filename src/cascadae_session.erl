@@ -14,13 +14,13 @@
     %% Pid of `cascadae_files' worker.
     files_pid,
     %% Is an interval timer for updates active?
-    is_files_active = true,
+    is_files_active = false,
     is_files_visible,
     peers_pid,
-    is_peers_active = true,
+    is_peers_active = false,
     is_peers_visible,
     trackers_pid,
-    is_trackers_active = true,
+    is_trackers_active = false,
     is_trackers_visible,
     is_page_visible=true,
     session_timeout_tref,
@@ -275,6 +275,9 @@ handle_info(SPid, _, {{peers, Hash}, What}, State=#sess_state{})
         {diff_list, Rows} ->
             fire_data_event(SPid, Hash, <<"rd_dataUpdated">>,
                             [{<<"rows">>, Rows}]);
+        {set_list, Rows} ->
+            fire_data_event(SPid, Hash, <<"rd_dataLoadCompleted">>,
+                            [{<<"rows">>, Rows}]);
         {add_list, Rows} ->
             fire_data_event(SPid, Hash, <<"rd_dataAdded">>,
                             [{<<"rows">>, Rows}]);
@@ -288,6 +291,9 @@ handle_info(SPid, _, {{trackers, Hash}, What}, State=#sess_state{})
     case What of
         {diff_list, Rows} ->
             fire_data_event(SPid, Hash, <<"rd_dataUpdated">>,
+                            [{<<"rows">>, Rows}]);
+        {set_list, Rows} ->
+            fire_data_event(SPid, Hash, <<"rd_dataLoadCompleted">>,
                             [{<<"rows">>, Rows}]);
         {add_list, Rows} ->
             fire_data_event(SPid, Hash, <<"rd_dataAdded">>,
@@ -331,32 +337,19 @@ register_object(SPid, Path=[<<"cascadae">>,<<"Table">>], Hash, State) ->
             fire_data_event(SPid, Hash, <<"rd_dataLoadCompleted">>,
                             [{<<"rows">>, Torrents}])
         end),
-    add_event_listener(SPid, Hash, <<"d_startTorrents">>),
-    add_event_listener(SPid, Hash, <<"d_stopTorrents">>),
     store_object(Path, Hash, State#sess_state{torrent_table_hash=Hash});
-register_object(SPid, Path=[<<"cascadae">>,<<"wishlist">>,<<"List">>], Hash, State) ->
-    add_event_listener(SPid, Hash, <<"d_wishesSave">>),
-    add_event_listener(SPid, Hash, <<"d_wishesRequest">>),
+register_object(_, Path=[<<"cascadae">>,<<"wishlist">>,<<"List">>], Hash, State) ->
     store_object(Path, Hash, State#sess_state{wish_list_hash=Hash});
-register_object(SPid, Path=[<<"cascadae">>,<<"files">>,<<"Tree">>], Hash, State) ->
-    add_event_listener(SPid, Hash, <<"d_childrenRequest">>),
-    add_event_listener(SPid, Hash, <<"d_wishFiles">>),
-    add_event_listener(SPid, Hash, <<"d_skipFiles">>),
-    add_event_listener(SPid, Hash, <<"d_unskipFiles">>),
+register_object(_, Path=[<<"cascadae">>,<<"files">>,<<"Tree">>], Hash, State) ->
     store_object(Path, Hash, State);
-register_object(_SPid, Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
+register_object(_, Path=[<<"cascadae">>,<<"Container">>], Hash, State) ->
     store_object(Path, Hash, State);
-
-register_object(SPid, Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
-    add_event_listener(SPid, Hash, <<"d_updateFilters">>),
+register_object(_, Path=[<<"cascadae">>,<<"peers">>,<<"Table">>], Hash, State) ->
+    store_object(Path, Hash, State);
+register_object(_, Path=[<<"cascadae">>,<<"trackers">>,<<"Table">>], Hash, State) ->
     store_object(Path, Hash, State);
 
-register_object(SPid, Path=[<<"cascadae">>,<<"trackers">>,<<"Table">>], Hash, State) ->
-    add_event_listener(SPid, Hash, <<"d_updateFilters">>),
-    store_object(Path, Hash, State);
-
-register_object(SPid, Path=[<<"cascadae">>,<<"AddTorrentWindow">>], Hash, State) ->
-    add_event_listener(SPid, Hash, <<"submitData">>),
+register_object(_, Path=[<<"cascadae">>,<<"AddTorrentWindow">>], Hash, State) ->
     store_object(Path, Hash, State);
 
 register_object(_SPid, Path, Hash, State) ->

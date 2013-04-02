@@ -17,10 +17,14 @@ qx.Class.define("cascadae.Container",
   {
     pageVisible:
     {
-      nullable:   false,
       init:       true,
       check:      "Boolean",
       event:      "changePageVisible"
+    },
+    enabled:
+    {
+      refine:     true,
+      init:       false
     }
   },
 
@@ -48,6 +52,7 @@ qx.Class.define("cascadae.Container",
     // Create toolbar
     this.__toolBar = new cascadae.ToolBar(this);
     this.add(this.__toolBar, { edge : "north" });
+    this.bind("enabled", this.__toolBar, "enabled");
 
     // Create side panel
     this.__stack = new qx.ui.container.Stack;
@@ -74,6 +79,12 @@ qx.Class.define("cascadae.Container",
     this.__onPageVisibilityChange();
     socket.registerObject(this);
     socket.bindRemoteProperty(this, "pageVisible");
+
+    this.addListener("changeEnabled", this._onChangeEnabled, this);
+
+    // With that code every change of the connected property of socket will
+    // automatically synchronize the enabled property of container.
+    socket.bind("connected", this, "enabled");
   },
 
   members :
@@ -116,17 +127,15 @@ qx.Class.define("cascadae.Container",
       this.__socket.addListener("rd_logEvent", this.__table.logHandler, this.__table);
       this.__mainStack.add(this.__table);
       socket.registerObject(this.__table);
-
-      this.setEnabled(false);
-
-      socket.addListener("connect", this.__setEnabled, this);
-      socket.addListener("disconnect", this.__setDisabled, this);
+      this.bind("enabled", this.__table, "enabled");
 
       this._initToolbarButtonActivation();
 //    this._initToolbarFileButtonActivation();
       // Do heavy calculations in idle time
       // document.setTimeout
       qx.event.Timer.once(this._initViews, this, 3000);
+      this.__socket.addRemoteListener(this.__table, "d_startTorrents");
+      this.__socket.addRemoteListener(this.__table, "d_stopTorrents");
     },
 
     _initViews : function()
@@ -141,6 +150,7 @@ qx.Class.define("cascadae.Container",
       this.__peersTable.initFilters(this.__table);
       this.__socket.registerObject(this.__peersTable);
       this.__socket.bindRemoteProperty(this.__peersTable, "active");
+      this.__socket.addRemoteListener(this.__peersTable, "d_updateFilters");
       qx.event.Timer.once(this._initViews2, this, 300);
     },
 
@@ -158,6 +168,10 @@ qx.Class.define("cascadae.Container",
       this.__filesTree = new cascadae.files.Tree();
       this.__socket.registerObject(this.__filesTree);
       this.__socket.bindRemoteProperty(this.__filesTree, "active");
+      this.__socket.addRemoteListener(this.__filesTree, "d_childrenRequest");
+      this.__socket.addRemoteListener(this.__filesTree, "d_wishFiles");
+      this.__socket.addRemoteListener(this.__filesTree, "d_skipFiles");
+      this.__socket.addRemoteListener(this.__filesTree, "d_unskipFiles");
       qx.event.Timer.once(this._initViews4, this, 300);
     },
 
@@ -167,6 +181,7 @@ qx.Class.define("cascadae.Container",
       this.__trackersTable.initFilters(this.__table);
       this.__socket.registerObject(this.__trackersTable);
       this.__socket.bindRemoteProperty(this.__trackersTable, "active");
+      this.__socket.addRemoteListener(this.__trackersTable, "d_updateFilters");
       qx.event.Timer.once(this._initViews5, this, 300);
     },
 
@@ -178,6 +193,8 @@ qx.Class.define("cascadae.Container",
       this.__table.bind("torrentId", this.__filesTree, "torrentId");
 
       this.__wishesList = new cascadae.wishlist.List();
+      this.__socket.addRemoteListener(this.__wishesList, "d_wishesSave");
+      this.__socket.addRemoteListener(this.__wishesList, "d_wishesRequest");
       this.__table.bind("torrentId", this.__wishesList, "torrentId");
       this.__socket.registerObject(this.__wishesList);
 
@@ -338,6 +355,7 @@ qx.Class.define("cascadae.Container",
       {
         this.__addTorrentWindow = win = new cascadae.AddTorrentWindow();
         this.__socket.registerObject(win);
+        this.__socket.addRemoteListener(this.__addTorrentWindow, "submitData");
         this.getRoot().add(win);
         win.addListener("close", this.__table.focus, this.__table);
 //      win.addListener("submitData", this.__addTorrentSubmit, this);
@@ -520,8 +538,9 @@ qx.Class.define("cascadae.Container",
      *
      * @param flag {Boolean} TODOC
      */
-    setEnabled : function(isEnabled)
+    _onChangeEnabled : function(e)
     {
+      var isEnabled = e.getData();
       this.info("setEnabled(" + isEnabled + "), focused widget is " + this.__focusedWidget);
       cc = this;
 
@@ -532,9 +551,6 @@ qx.Class.define("cascadae.Container",
 //      if (this.__focusedWidget) this.__focusedWidget.blur();
       }
 
-      this.__toolBar.setEnabled(isEnabled);
-      this.__table.setEnabled(isEnabled);
-
       if (isEnabled)
       {
         var widget = this.__focusedWidget ? this.__focusedWidget : this.__table;
@@ -542,16 +558,6 @@ qx.Class.define("cascadae.Container",
         widget.focus();
         this.__focusedWidget = null;
       } 
-    },
-
-    __setEnabled : function()
-    {
-      this.setEnabled(true);
-    },
-
-    __setDisabled : function()
-    {
-      this.setEnabled(false);
     }
   }
 });

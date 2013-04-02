@@ -67,13 +67,11 @@ deactivate(Srv) ->
 %% ------------------------------------------------------------------
 
 init([Session, Tag]) ->
-    {ok, TRef} = timer:send_interval(5000, update_table),
     SMRef = monitor(process, Session),
     State = #peers_state{
             session_pid=Session,
             session_tag=Tag,
-            session_mref=SMRef,
-            update_table_tref=TRef
+            session_mref=SMRef
             },
     {ok, State}.
 
@@ -192,7 +190,10 @@ viz_add_peers(AddedTP, S=#peers_state{cl_tid_pids=OldClSTP, viz_tid_pids=OldVizS
             NewClSTP = ordsets:union(OldClSTP, VizAddedSTP),
             lager:info("Add ~p to the client peer table.", [VizAddedSTP]),
             {List, S1} = peer_list(VizAddedSTP, S),
-            push_to_client({add_list, List}, S),
+            case OldVizSTP of
+                [_|_] -> push_to_client({add_list, List}, S);
+                []    -> push_to_client({set_list, List}, S)
+            end,
             NewVizSTP = ordsets:union(OldVizSTP, VizAddedSTP),
             S1#peers_state{cl_tid_pids=NewClSTP, viz_tid_pids=NewVizSTP}
     end.
