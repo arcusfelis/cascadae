@@ -274,6 +274,62 @@ qx.Class.define("cascadae.Table",
       var ids = this.getSelectedIds();
       var torrent_id =  ids.length ? ids[0] : null;
       this.setTorrentId(torrent_id);
+    },
+
+    _updateStatusBar : function()
+    {
+      var tableModel = this.getTableModel();
+      var box = new qx.ui.layout.HBox();
+
+      if (this.getStatusBarVisible())
+      {
+        var selectedRowCount = this.getSelectionModel().getSelectedCount();
+        var rowCount = tableModel.getRowCount();
+
+        var text;
+
+        if (rowCount >= 0)
+        {
+          if (selectedRowCount == 0) {
+            text = this.trn("one row", "%1 rows", rowCount, rowCount);
+          } else {
+            text = this.trn("one of one row", "%1 of %2 rows", rowCount, selectedRowCount, rowCount);
+          }
+        }
+
+        if (text && this.__statusbarInfo) {
+          this.__statusbarInfo.setValue(text);
+        }
+      }
+    },
+    
+    _createChildControlImpl : function(id, hash)
+    {
+      var control;
+
+      switch(id)
+      {
+      case "statusbar":
+        control = new qx.ui.container.Composite(new qx.ui.layout.HBox());
+        control.set({ allowGrowX: true });
+        this.__statusbarInfo = new qx.ui.basic.Label();
+        this.__speedInfo = new qx.ui.basic.Label("Speed");
+        this.__speedInfo.addListener("click", this.__dispaySpeedControl, this);
+        control.add(this.__statusbarInfo);
+        control.add(new qx.ui.core.Spacer, {flex: 1});
+        control.add(this.__speedInfo);
+        this._add(control);
+      }
+      return control || this.base(arguments, id);
+    },
+
+    __speedControlPane : null,
+    __dispaySpeedControl: function()
+    {
+      if (!this.__speedControlPane)
+        this.__speedControlPane = new cascadae.speedControl.Pane();
+      this.__speedControlPane.placeToWidget(this.__speedInfo);
+      this.__speedControlPane.show();
     }
   }
 });

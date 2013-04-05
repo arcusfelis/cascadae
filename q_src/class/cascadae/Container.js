@@ -193,6 +193,11 @@ qx.Class.define("cascadae.Container",
       this.__table.bind("torrentId", this.__filesTree, "torrentId");
 
       this.__wishesList = new cascadae.wishlist.List();
+      qx.event.Timer.once(this._initViews6, this, 300);
+    },
+
+    _initViews6 : function()
+    {
       this.__socket.addRemoteListener(this.__wishesList, "d_wishesSave");
       this.__socket.addRemoteListener(this.__wishesList, "d_wishesRequest");
       this.__table.bind("torrentId", this.__wishesList, "torrentId");
@@ -205,7 +210,7 @@ qx.Class.define("cascadae.Container",
       this.__peersView = this.__peersTable;
       this.__trackersView = this.__trackersTable;
       this.__logView = this.__logTable;
- 
+
       this.__stack.add(this.__filesView);
       this.__stack.add(this.__wishesView);
       this.__stack.add(this.__peersView);
@@ -229,29 +234,31 @@ qx.Class.define("cascadae.Container",
       var container = this;
 
       arr.map(function(obj) {
-        obj.addListener("focusin",  container.__focusInHandler,  container);
-        obj.addListener("focusout", container.__focusOutHandler, container);
+        obj.addListener("focusin",  container.__focusChanged,  container);
+        obj.addListener("focusout", container.__focusChanged, container);
       });
     },  
 
-    __lastButtonSetName : "torrent_table",
-    __focusInHandler : function(e)
+    __focusChangedTRef : null,
+    __focusChanged: function()
     {
-      var t = e.getTarget();
-      var n = this.getName(t);
+      if (this.__focusChangedTRef) return;
+      this.__focusChangedTRef = qx.event.Timer.once(this.__applyFocus, this, 30);
+    },
+
+    __lastButtonSetName : "torrent_table",
+    __applyFocus : function()
+    {
+      var fh = qx.ui.core.FocusHandler.getInstance();
+      var fw = fh.getFocusedWidget();
+      var n = this.getName(fw);
       if (n && this.__lastButtonSetName != n)
       {
         this.__toolBar.deactivate(this.__lastButtonSetName);
         this.__toolBar.activate(n);
         this.__lastButtonSetName = n;
       }
-    },
-
-    __focusOutHandler : function(e)
-    {
-//    var t = e.getTarget();
-//    var n = this.getName(t);
-//    this.__toolBar.deactivate(n);
+      this.__focusChangedTRef = null;
     },
 
     getName: function(t)
@@ -468,31 +475,48 @@ qx.Class.define("cascadae.Container",
       this.__activeView = view;
 
       // Are views initialized?
-      if (this.__viewLoaded)
-        this.selectView(view);
+      var __selectViewAsyncTRef =
+          qx.event.Timer.once(this.__selectViewAsync, this, 1);
     },
 
-    
+    __selectViewAsyncTRef : null,
+    __selectViewAsync: function() {
+      if (this.__activeView)
+      {
+        this.__stack.setSelection([]);
+        this.__stack.show();
+      } else {
+        this.__stack.exclude();
+      }
+      qx.event.Timer.once(this.__selectViewAsync2, this, 1);
+    },
+
+    __selectViewAsync2: function()
+    {
+      if (this.__viewLoaded)
+        this.selectView(this.__activeView);
+      this.__selectViewAsyncTRef = null;
+    },
+
     selectView : function(show)
     {
       var isFileViewEnabled = false;
       var isWishViewEnabled = false;
       var isPeerViewEnabled = false;
       var isTrackerViewEnabled = false;
+      var isLogViewEnabled = false;
       this.info("Select view " + show);
 
       switch(show)
       {
         case "files":
           this.__stack.setSelection([ this.__filesView ]);
-          this.__stack.show();
           this.__filesView.focus();
           isFileViewEnabled = true;
           break;
 
         case "wishlist":
           this.__stack.setSelection([ this.__wishesView ]);
-          this.__stack.show();
           this.__wishesView.focus();
           isWishViewEnabled = true;
           break;
@@ -500,35 +524,35 @@ qx.Class.define("cascadae.Container",
         case "peers":
 //        this.__store.reloadPeers();
           this.__stack.setSelection([ this.__peersView ]);
-          this.__stack.show();
           this.__peersView.focus();
           isPeerViewEnabled = true;
           break;
 
         case "trackers":
           this.__stack.setSelection([ this.__trackersView ]);
-          this.__stack.show();
           this.__trackersView.focus();
           isTrackerViewEnabled = true;
           break;
 
         case "log":
           this.__stack.setSelection([ this.__logView ]);
-          this.__stack.show();
           this.__logView.focus();
+          isLogViewEnabled = true;
           break;
 
         default:
           this.__stack.resetSelection();
-          this.__stack.exclude();
           this.__table.focus();
       }
 
+      var f = function() {
       this.__filesTree.setActive(isFileViewEnabled);
       this.__wishesList.setActive(isWishViewEnabled);
       this.__peersTable.setActive(isPeerViewEnabled);
       this.__trackersTable.setActive(isTrackerViewEnabled);
-      this.__logTable.setActive(true);
+      this.__logTable.setActive(isLogViewEnabled);
+      }
+      qx.event.Timer.once(f, this, 30);
     },
 
     __focusedWidget: null,

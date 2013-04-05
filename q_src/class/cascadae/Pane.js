@@ -150,6 +150,8 @@ qx.Class.define("cascadae.Pane",
 
     // sparse array to cache rendered rows
     __rowCache : null,
+    // {rowId, rowVersion, value}
+    __cachedSelected : null,
     __rowCacheCount : 0,
 
 
@@ -319,6 +321,7 @@ qx.Class.define("cascadae.Pane",
     {
 //    this.info("Clear cache");
       this.__rowCache = [];
+      this.__cachedSelected = null;
       this.__rowCacheCount = 0;
     },
 
@@ -334,7 +337,7 @@ qx.Class.define("cascadae.Pane",
      */
     __rowCacheGet : function(rowId, rowVersion, selected, focused)
     {
-      if (!selected && !focused && this.__rowCache[rowId]) {
+      if (!selected && this.__rowCache[rowId]) {
         var row = this.__rowCache[rowId];
         if (row.version === rowVersion)
         {
@@ -343,6 +346,10 @@ qx.Class.define("cascadae.Pane",
           delete this.__rowCache[rowId];
           return null;
         }
+      } else if(selected && this.__cachedSelected && 
+                this.__cachedSelected.rowId == rowId &&
+                this.__cachedSelected.rowVersion == rowVersion) {
+        return this.__cachedSelected.value;
       } else {
         return null;
       }
@@ -362,13 +369,14 @@ qx.Class.define("cascadae.Pane",
       var maxCacheLines = this.getMaxCacheLines();
       if (
         !selected &&
-        !focused &&
         !this.__rowCache[rowId]
 //      maxCacheLines > 0
       ) {
 //      this._applyMaxCacheLines(maxCacheLines);
         this.__rowCache[rowId] = {string: rowString, version: rowVersion};
 //      this.__rowCacheCount += 1;
+      } if (selected) {
+        this.__cachedSelected = {rowId: rowId, rowVersion: rowVersion, value: rowString};
       }
     },
 
