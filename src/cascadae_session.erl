@@ -24,12 +24,11 @@
     is_trackers_visible,
     is_page_visible=true,
     session_timeout_tref,
-    saved_hub_state
+    saved_hub_state,
+    saved_speed_hub_state,
+    speed_ctrl_hash
 }).
 -define(OBJ_TBL, cascadae_object_register).
-%% The socketio_session has same timeout already, but this timeout is 
-%% called from the client side.
--define(HUB, cascadae_hub).
 
 -record(object, {
     hash,
@@ -44,7 +43,7 @@ send(SPid, Mess) ->
 open(SPid, Sid, _Opts) ->
     put(process_type, cascadae_session),
     %% Initialization
-    ?HUB:add_handler(),
+    cascadae_hub:add_handler(),
     error_logger:info_msg("open ~p ~p~n", [SPid, Sid]),
     ObjTbl = ets:new(?OBJ_TBL, [{keypos, #object.hash}]),
     {ok, #sess_state{obj_tbl=ObjTbl}}.
@@ -67,6 +66,7 @@ recv(_, _, {event, <<>>, <<"changePageVisible">>, Meta}, State@) ->
     assert_bool(IsVisible),
     State@ = State@#sess_state{is_page_visible=IsVisible},
     State@ = check_hub_state(State@),
+    State@ = check_speed_hub_state(State@),
     State@ = check_tracker_visibility(State@),
     State@ = check_peer_visibility(State@),
     State@ = check_file_visibility(State@),
@@ -248,11 +248,31 @@ recv(_, _, {event, <<>>, <<"submitData">>, Meta}, State=#sess_state{}) ->
             {ok, State}
     end;
 
+recv(_, _, {event, <<>>, <<"d_changeRates">>, Meta}, State=#sess_state{}) ->
+    Hash      = proplists:get_value(<<"hash">>, Meta),
+    Data      = proplists:get_value(<<"data">>, Meta),
+    #object{path=Path} = extract_object(Hash, State),
+    case Path of
+       [<<"cascadae">>,<<"speedControl">>,<<"Info">>] ->
+            In  = proplists:get_value(<<"rate_in">>, Data),
+            Out = proplists:get_value(<<"rate_out">>, Data),
+            proc_lib:spawn(fun() ->
+                  etorrent_rlimit:max_send_rate(Out),
+                  etorrent_rlimit:max_recv_rate(In)
+                end),
+            {ok, State}
+    end;
+
 recv(SPid, Sid, Message, State) ->
     lager:debug("recv ~p ~p ~p~n", [SPid, Sid, Message]),
     {ok, State}.
 
 
+handle_info(SPid, _, {speed_rate_update, ChangedPL},
+            State=#sess_state{speed_ctrl_hash=Hash}) ->
+    fire_data_event(SPid, Hash, <<"rd_dataUpdated">>, ChangedPL),
+    lager:debug("Speed: ~p", [ChangedPL]),
+    {ok, State};
 handle_info(SPid, _, {torrents, What},
             State=#sess_state{torrent_table_hash=Hash})
     when is_binary(Hash) ->
@@ -333,11 +353,15 @@ close(SPid, Sid, #sess_state{}) ->
 
 register_object(SPid, Path=[<<"cascadae">>,<<"Table">>], Hash, State) ->
     proc_lib:spawn_link(fun() ->
-            Torrents = ?HUB:all_torrents(),
+            Torrents = cascadae_hub:all_torrents(),
             fire_data_event(SPid, Hash, <<"rd_dataLoadCompleted">>,
                             [{<<"rows">>, Torrents}])
         end),
     store_object(Path, Hash, State#sess_state{torrent_table_hash=Hash});
+register_object(SPid, Path=[<<"cascadae">>,<<"speedControl">>,<<"Info">>],
+                Hash, State) ->
+    cascadae_speed_hub:add_handler(),
+    store_object(Path, Hash, State#sess_state{speed_ctrl_hash=Hash});
 register_object(_, Path=[<<"cascadae">>,<<"wishlist">>,<<"List">>], Hash, State) ->
     store_object(Path, Hash, State#sess_state{wish_list_hash=Hash});
 register_object(_, Path=[<<"cascadae">>,<<"files">>,<<"Tree">>], Hash, State) ->
@@ -503,3 +527,15 @@ check_hub_state(S=#sess_state{is_page_visible=false, saved_hub_state=undefined})
     SavedHubState = cascadae_hub:suspend_handler(),
     S#sess_state{saved_hub_state=SavedHubState};
 check_hub_state(S=#sess_state{is_page_visible=false}) -> S.
+
+%% Suspend and resume the hub.
+check_speed_hub_state(S=#sess_state{speed_ctrl_hash=undefined}) -> S;
+check_speed_hub_state(S=#sess_state{is_page_visible=true, saved_speed_hub_state=undefined}) -> S;
+check_speed_hub_state(S=#sess_state{is_page_visible=true, saved_speed_hub_state=SavedHubState}) -> 
+    [cascadae_speed_hub:resume_handler(SavedHubState)
+     || SavedHubState =/= undefined],
+    S#sess_state{saved_speed_hub_state=undefined};
+check_speed_hub_state(S=#sess_state{is_page_visible=false, saved_speed_hub_state=undefined}) -> 
+    SavedHubState = cascadae_speed_hub:suspend_handler(),
+    S#sess_state{saved_speed_hub_state=SavedHubState};
+check_speed_hub_state(S=#sess_state{is_page_visible=false}) -> S.

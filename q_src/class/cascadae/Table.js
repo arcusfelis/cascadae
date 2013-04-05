@@ -23,8 +23,10 @@ qx.Class.define("cascadae.Table",
     "d_stopTorrents"  : "qx.event.type.Data"
   },
 
-  construct : function()
+  construct : function(speedInfo)
   {
+    this.__speedInfo = speedInfo;
+
     var n2c =
     {
       "id"                  : this.tr("Id"),
@@ -313,8 +315,7 @@ qx.Class.define("cascadae.Table",
         control = new qx.ui.container.Composite(new qx.ui.layout.HBox());
         control.set({ allowGrowX: true });
         this.__statusbarInfo = new qx.ui.basic.Label();
-        this.__speedInfo = new qx.ui.basic.Label("Speed");
-        this.__speedInfo.addListener("click", this.__dispaySpeedControl, this);
+        this.__speedInfo.addListener("mousedown", this.__dispaySpeedControl, this);
         control.add(this.__statusbarInfo);
         control.add(new qx.ui.core.Spacer, {flex: 1});
         control.add(this.__speedInfo);
@@ -327,9 +328,30 @@ qx.Class.define("cascadae.Table",
     __dispaySpeedControl: function()
     {
       if (!this.__speedControlPane)
-        this.__speedControlPane = new cascadae.speedControl.Pane();
-      this.__speedControlPane.placeToWidget(this.__speedInfo);
-      this.__speedControlPane.show();
+      {
+        this.__speedControlPane = new cascadae.speedControl.Pane(this.__speedInfo);
+        this.__speedControlPane.addListener("changeVisibility",
+                this.__onSpeedControlPaneVisibilityChange, this);
+      }
+      var pane = this.__speedControlPane;
+      if (pane.isVisible())
+      {
+        pane.hide();
+      } else {
+        pane.placeToWidget(this.__speedInfo);
+        pane.show();
+      }
+    },
+    // A mousedown event on any widget under the popup will close it.
+    // A mousedown  eventon the button will open it again, even if it was closed
+    // a millisecond ago.
+    // To disable this behaviour we use this handler.
+    __onSpeedControlPaneVisibilityChange: function(e)
+    {
+      if (this.__speedControlPane.isVisible())
+        this.__speedInfo.removeListener("mousedown", this.__dispaySpeedControl, this);
+      else 
+        this.__speedInfo.addListener("mousedown", this.__dispaySpeedControl, this);
     }
   }
 });

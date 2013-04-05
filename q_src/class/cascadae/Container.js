@@ -123,19 +123,23 @@ qx.Class.define("cascadae.Container",
     _initMainTable: function()
     {
       var socket = this.__socket;
-      this.__table = new cascadae.Table();
+      var speedInfo = new cascadae.speedControl.Info();
+      this.__table = new cascadae.Table(speedInfo);
       this.__socket.addListener("rd_logEvent", this.__table.logHandler, this.__table);
       this.__mainStack.add(this.__table);
       socket.registerObject(this.__table);
       this.bind("enabled", this.__table, "enabled");
 
+      socket.registerObject(speedInfo);
+      this.__socket.addRemoteListener(speedInfo, "d_changeRates");
+
       this._initToolbarButtonActivation();
 //    this._initToolbarFileButtonActivation();
+      this.__socket.addRemoteListener(this.__table, "d_startTorrents");
+      this.__socket.addRemoteListener(this.__table, "d_stopTorrents");
       // Do heavy calculations in idle time
       // document.setTimeout
       qx.event.Timer.once(this._initViews, this, 3000);
-      this.__socket.addRemoteListener(this.__table, "d_startTorrents");
-      this.__socket.addRemoteListener(this.__table, "d_stopTorrents");
     },
 
     _initViews : function()

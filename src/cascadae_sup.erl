@@ -18,4 +18,5 @@ start_link() ->
 
 init([]) ->
     Hub = ?CHILD(cascadae_hub, worker),
-	{ok, {{one_for_one, 10, 10}, [Hub]}}.
+    SHub = ?CHILD(cascadae_speed_hub, worker),
+	{ok, {{one_for_one, 10, 10}, [Hub, SHub]}}.

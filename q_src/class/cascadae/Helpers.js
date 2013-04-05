@@ -56,6 +56,27 @@ qx.Class.define("cascadae.Helpers",
 
         return 0;
       };
+    },
+
+
+    /**
+     * Convert number of bytes into human readable format
+     *
+     * @param bytes {var} TODOC
+     * @param precision {var} TODOC
+     * @return {string | var} string
+     */
+    bytesToSize : function(bytes, precision)
+    {
+      if (isNaN(bytes) || (bytes == 0)) return '0';
+
+      var kilobyte = 1024;
+
+      if ((bytes >= 0) && (bytes < kilobyte)) {
+        return bytes + ' B/s';
+      } else {
+        return (bytes / kilobyte).toFixed(precision) + ' KiB/s';
+      }
     }
   }
 });
