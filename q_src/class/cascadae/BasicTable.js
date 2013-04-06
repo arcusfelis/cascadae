@@ -48,6 +48,7 @@ qx.Class.define("cascadae.BasicTable",
         }
     });
     this.set({
+      rowHeight: 23,
       alwaysUpdateCells: false,
       showCellFocusIndicator: false
     });

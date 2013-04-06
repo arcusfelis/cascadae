@@ -32,6 +32,8 @@ qx.Theme.define("cascadae.theme.Color",
     "table-row-background-even" : "transparent",
     "table-row-background-odd" : "transparent",
     "progressive-table-row-background-even" : "transparent",
-    "progressive-table-row-background-odd"  : "transparent"
+    "progressive-table-row-background-odd"  : "transparent",
+    "background" : "#F4F4F4",
+    "table-pane" : "white"
   }
 });

@@ -10,11 +10,11 @@
 
 qx.Theme.define("cascadae.theme.Font",
 {
-//extend : qx.theme.modern.Font,
+  extend : qx.theme.indigo.Font,
   fonts  : {
-    "default" : { },
-    "bold" : { },
-    "small" : { },
-    "headline" : { size: 12 }
+    "headline" : { 
+        family : ["Lucida Grande", "DejaVu Sans", "Verdana", "sans-serif"],
+        size: 16
+    }
   }
 });

@@ -33,6 +33,10 @@ qx.Class.define("cascadae.speedControl.ExpSlider",
     this.base(arguments);
   },
 
+  statics: {
+    MAGIC_NUMBER: 14.154262241479262
+  },
+
 
   /*
   *****************************************************************************
@@ -134,7 +138,7 @@ qx.Class.define("cascadae.speedControl.ExpSlider",
       // value * 15 + 1 = Math.exp(Math.E * norm_pos)
       // Math.log(value * 15 + 1) / Math.E = norm_pos
       var norm_value = this.__normalizePosition(value, this); // 0..1
-      var exp_norm_value = Math.log(norm_value * 15 + 1) / Math.E;
+      var exp_norm_value = Math.log(norm_value * this.self(arguments).MAGIC_NUMBER + 1) / Math.E;
 //    console.log("value=" + value + ", norm_value=" + norm_value + ", exp_norm_value=" + exp_norm_value);
       return this.__concreteValue(exp_norm_value, this.getSlider());
     },
@@ -142,7 +146,7 @@ qx.Class.define("cascadae.speedControl.ExpSlider",
     __position2value : function(pos) {
       var slider = this.getSlider();
       var norm_pos_exp = this.__normalizePosition(pos, slider);
-      var norm_pos = (Math.exp(Math.E * norm_pos_exp) - 1) / 15; // 0 .. 1
+      var norm_pos = (Math.exp(Math.E * norm_pos_exp) - 1) / this.self(arguments).MAGIC_NUMBER; // 0 .. 1
       var value = this.__concreteValue(norm_pos, this);
       return this.__normalizeValue(value);
     },

@@ -1,11 +1,13 @@
 /* ************************************************************************
 
-#asset(cascadae/icon/16/files/folder-open-partical.png)
-#asset(cascadae/icon/16/files/folder-open-skipped.png)
-#asset(cascadae/icon/16/files/folder-partical.png)
-#asset(cascadae/icon/16/files/folder-skipped.png)
-#asset(cascadae/icon/16/files/office-skipped.png)
-#asset(qx/icon/Tango/16/mimetypes/office-document.png)
+#asset(cascadae/icon/22/files/folder-open-partical.png)
+#asset(cascadae/icon/22/files/folder-open-skipped.png)
+#asset(cascadae/icon/22/files/folder-partical.png)
+#asset(cascadae/icon/22/files/folder-skipped.png)
+#asset(cascadae/icon/22/files/office-skipped.png)
+#asset(qx/icon/Tango/22/mimetypes/office-document.png)
+#asset(qx/icon/Tango/22/places/folder.png)
+#asset(qx/icon/Tango/22/places/folder-open.png)
 
 ************************************************************************ */
 
@@ -74,7 +76,7 @@ qx.Class.define("cascadae.files.Tree",
     var paneCon = function(obj) {
       var pane = new cascadae.Pane(obj);
       // This is useful for debugging.
-      pane.setForceSyncUpdate(true);
+//    pane.setForceSyncUpdate(true);
       return pane;
     }
     var dm = new cascadae.files.Model();
@@ -84,6 +86,7 @@ qx.Class.define("cascadae.files.Tree",
     };
     this.base(arguments, captions, custom);
     this.set({
+        rowHeight: 23,
         alwaysShowOpenCloseSymbol: true,
         appearance: "file-tree",
         alwaysUpdateCells: false,
@@ -186,10 +189,10 @@ qx.Class.define("cascadae.files.Tree",
             var icon;
             switch(mode) {
                 case "skip":
-                    icon  = "cascadae/icon/16/files/office-skipped.png";
+                    icon  = "cascadae/icon/22/files/office-skipped.png";
                     break;
                 default:
-                    icon  = "icon/16/mimetypes/office-document.png";
+                    icon  = "icon/22/mimetypes/office-document.png";
             }
             var nid = dm.addLeaf(parent_nid, name, icon, icon);
           } else {
@@ -216,26 +219,26 @@ qx.Class.define("cascadae.files.Tree",
         {
           switch(mode) {
             case "partial":
-                icon = "cascadae/icon/16/files/folder-open-partical.png";
+                icon = "cascadae/icon/22/files/folder-open-partical.png";
                 break;
             case "skip":
-                icon = "cascadae/icon/16/files/folder-open-skipped.png";
+                icon = "cascadae/icon/22/files/folder-open-skipped.png";
                 break;
             default:
-                icon = "icon/16/places/folder-open.png";
+                icon = "icon/22/places/folder-open.png";
           }
         }
         else
         {
           switch(mode) {
             case "partial":
-                icon = "cascadae/icon/16/files/folder-partical.png";
+                icon = "cascadae/icon/22/files/folder-partical.png";
                 break;
             case "skip":
-                icon = "cascadae/icon/16/files/folder-skipped.png";
+                icon = "cascadae/icon/22/files/folder-skipped.png";
                 break;
             default:
-                icon = "icon/16/places/folder.png";
+                icon = "icon/22/places/folder.png";
           }
         }
         return icon;
@@ -253,14 +256,14 @@ qx.Class.define("cascadae.files.Tree",
         il.load(rm.toUri(am.resolve(f)));
       };
 
-      loadImage("cascadae/icon/16/files/folder-open-partical.png");
-      loadImage("cascadae/icon/16/files/folder-open-skipped.png");
-      loadImage("cascadae/icon/16/files/folder-partical.png");
-      loadImage("cascadae/icon/16/files/folder-skipped.png");
-      loadImage("cascadae/icon/16/files/office-skipped.png");
-      loadImage("icon/16/mimetypes/office-document.png");
-      loadImage("icon/16/places/folder.png");
-      loadImage("icon/16/places/folder-open.png");
+      loadImage("cascadae/icon/22/files/folder-open-partical.png");
+      loadImage("cascadae/icon/22/files/folder-open-skipped.png");
+      loadImage("cascadae/icon/22/files/folder-partical.png");
+      loadImage("cascadae/icon/22/files/folder-skipped.png");
+      loadImage("cascadae/icon/22/files/office-skipped.png");
+      loadImage("icon/22/mimetypes/office-document.png");
+      loadImage("icon/22/places/folder.png");
+      loadImage("icon/22/places/folder-open.png");
     },
 
 
@@ -587,7 +590,7 @@ qx.Class.define("cascadae.files.Tree",
     {
       if (node.type == qx.ui.treevirtual.MTreePrimitive.Type.LEAF)
       {
-        node.iconSelected = node.icon = "cascadae/icon/16/files/office-skipped.png";
+        node.iconSelected = node.icon = "cascadae/icon/22/files/office-skipped.png";
       } else {
         node.iconSelected = node.icon = this.__folderIcon("skip", node.bOpened);
       }
@@ -597,7 +600,7 @@ qx.Class.define("cascadae.files.Tree",
     {
       if (node.type == qx.ui.treevirtual.MTreePrimitive.Type.LEAF)
       {
-        node.iconSelected = node.icon = "icon/16/mimetypes/office-document.png";
+        node.iconSelected = node.icon = "icon/22/mimetypes/office-document.png";
       } else {
         node.iconSelected = node.icon = this.__folderIcon("download", node.bOpened);
       }

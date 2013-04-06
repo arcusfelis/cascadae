@@ -394,6 +394,11 @@ qx.Class.define("cascadae.Pane",
      */
     updateContent : function(completeUpdate, scrollOffset, onlyRow, onlySelectionOrFocusChanged)
     {
+      var tabelModel = this.getTable().getTableModel();
+      var modelRowCount = tabelModel.getRowCount();
+      if (!modelRowCount)
+        this.__rowCacheClear();
+
       if (!this.getTable().isVisible())
       {
 //      this.info("Invisible");
@@ -403,7 +408,7 @@ qx.Class.define("cascadae.Pane",
       {
         this.__rowCacheClear();
       }
-      var updateNow = this.getForceSyncUpdate() || onlyRow || onlySelectionOrFocusChanged; 
+      var updateNow = (scrollOffset !== null) || this.getForceSyncUpdate() || onlyRow || onlySelectionOrFocusChanged; 
       if (updateNow)
       {
         this.doUpdateContent(scrollOffset, onlyRow, onlySelectionOrFocusChanged); 
@@ -501,7 +506,7 @@ qx.Class.define("cascadae.Pane",
         cellInfo.rowData = tableModel.getRowData(row, undefined, false);
         if (!cellInfo.rowData)
         {
-          this.error("Cannot get data from row = " + row);
+//        this.error("Cannot get data from row = " + row);
         } else {
           rowRenderer.updateDataRowElement(cellInfo, rowNodes[y]);
         }
@@ -656,21 +661,20 @@ qx.Class.define("cascadae.Pane",
         return;
       }
 
-      var tableBody = el.firstChild;
-      var tableChildNodes = tableBody.childNodes;
       var rowCount = this.getVisibleRowCount();
       var firstRow = this.getFirstVisibleRow();
 
       var tabelModel = this.getTable().getTableModel();
-      var modelRowCount = 0;
-
-      modelRowCount = tabelModel.getRowCount();
+      var modelRowCount = tabelModel.getRowCount();
 
       // don't handle this special case here
       if (firstRow + rowCount > modelRowCount) {
         this._updateAllRows();
         return;
       }
+
+      var tableBody = el.firstChild;
+      var tableChildNodes = tableBody.childNodes;
 
       // remove old lines
       var removeRowBase = rowOffset < 0 ? rowCount + rowOffset : 0;
@@ -715,11 +719,11 @@ qx.Class.define("cascadae.Pane",
       }
 
       // update focus indicator
-      if (this.__focusedRow !== null)
-      {
-        this._updateRowStyles(this.__focusedRow - rowOffset);
-        this._updateRowStyles(this.__focusedRow);
-      }
+//    if (this.__focusedRow !== null)
+//    {
+//      this._updateRowStyles(this.__focusedRow - rowOffset);
+//      this._updateRowStyles(this.__focusedRow);
+//    }
       this.fireEvent("paneUpdated");
     },
 

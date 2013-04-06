@@ -582,8 +582,11 @@ qx.Class.define("cascadae.Container",
       if (isEnabled)
       {
         var widget = this.__focusedWidget ? this.__focusedWidget : this.__table;
-        widget.blur();
-        widget.focus();
+        if (widget)
+        {
+          widget.blur();
+          widget.focus();
+        }
         this.__focusedWidget = null;
       } 
     }

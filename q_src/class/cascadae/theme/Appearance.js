@@ -6,6 +6,9 @@
 
    Authors:
 
+#asset(cascadae/icon/22/plus.png)
+#asset(cascadae/icon/22/minus.png)
+
 ************************************************************************ */
 
 qx.Theme.define("cascadae.theme.Appearance",
@@ -40,7 +43,38 @@ qx.Theme.define("cascadae.theme.Appearance",
       {
         return {
           decorator : states.focused ? "focused-statusbar" : "statusbar",
-          padding : [2, 5]
+          padding : [2, 5],
+          backgroundColor : "table-pane"
+        };
+      }
+    },
+
+    "treevirtual-contract" :
+    {
+      style : function(states)
+      {
+        return {
+          icon : "cascadae/icon/22/minus.png"
+        }
+      }
+    },
+
+    "treevirtual-expand" :
+    {
+      style : function(states)
+      {
+        return {
+          icon : "cascadae/icon/22/plus.png"
+        }
+      }
+    },
+
+    "table-scroller/pane" :
+    {
+      style : function(states)
+      {
+        return {
+          backgroundColor : "table-pane"
         };
       }
     }
