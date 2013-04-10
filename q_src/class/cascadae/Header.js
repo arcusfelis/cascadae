@@ -22,9 +22,9 @@ qx.Class.define("cascadae.Header",
     this.setLayout(new qx.ui.layout.HBox);
     this.setAppearance("app-header");
 
-    var title = new qx.ui.basic.Label("Rhyacotriton");
+    var title = new qx.ui.basic.Label("ETorrent");
     var version = new qx.ui.basic.Label("0.1");
-    version.setFont("default");
+//  version.setFont("default");
 
     this.add(title);
     this.add(new qx.ui.core.Spacer, { flex : 1 });

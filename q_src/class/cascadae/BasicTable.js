@@ -432,8 +432,10 @@ qx.Class.define("cascadae.BasicTable",
 
     _applyActive : function(value, old, name) {
       if (value && this.__dirty) 
+      {
         this.updateFilters();
-      this.__dirty = false;
+        this.__dirty = false;
+      }
 
       this.info("Activate peer table " + value);
       if (this.__virgin)

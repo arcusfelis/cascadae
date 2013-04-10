@@ -195,6 +195,7 @@ qx.Class.define("cascadae.Container",
       // If table.torrentId will changed, than __filesTree.torrentId will be
       // changed too.
       this.__table.bind("torrentId", this.__filesTree, "torrentId");
+      this.__filesTree.setTorrentId(this.__table.getTorrentId());
 
       this.__wishesList = new cascadae.wishlist.List();
       qx.event.Timer.once(this._initViews6, this, 300);
@@ -549,14 +550,11 @@ qx.Class.define("cascadae.Container",
           this.__table.focus();
       }
 
-      var f = function() {
       this.__filesTree.setActive(isFileViewEnabled);
       this.__wishesList.setActive(isWishViewEnabled);
       this.__peersTable.setActive(isPeerViewEnabled);
       this.__trackersTable.setActive(isTrackerViewEnabled);
       this.__logTable.setActive(isLogViewEnabled);
-      }
-      qx.event.Timer.once(f, this, 30);
     },
 
     __focusedWidget: null,

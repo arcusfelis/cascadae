@@ -298,8 +298,10 @@ qx.Class.define("cascadae.files.Tree",
 
     _applyActive : function(value, old, name) {
       if (value && this.__dirty) 
+      {
         this.updateData();
-      this.__dirty = false;
+        this.__dirty = false;
+      }
     },
 
 
