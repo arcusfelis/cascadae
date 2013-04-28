@@ -5,6 +5,7 @@ deps/*
 *.trace
 .eunit
 doc/README.md
+doc
 log/
 
 q_bin/*

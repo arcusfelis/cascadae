@@ -169,7 +169,7 @@ code_change(_OldVsn, SN, SD, _Extra) ->
 
 %% @doc Subscribes this process on new messages.
 %%      It is used in bullet handler.
-%%      You can also run this into your console and use `flush().
+%%      You can also run this into your console and use `flush()'.
 -spec add_handler() -> SavedState :: term().
 add_handler() ->
     gen_fsm:sync_send_event(?SERVER, add_handler).

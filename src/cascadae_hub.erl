@@ -244,7 +244,7 @@ all_torrents() ->
 
 %% @doc Subscribes this process on new messages.
 %%      It is used in bullet handler.
-%%      You can also run this into your console and use `flush().
+%%      You can also run this into your console and use `flush()'.
 -spec add_handler() -> SavedState :: term().
 add_handler() ->
     gen_fsm:sync_send_event(?SERVER, add_handler).
@@ -256,8 +256,8 @@ resume_handler(SavedState) ->
 suspend_handler() ->
     gen_fsm:sync_send_event(?SERVER, suspend_handler).
 
-%% @doc Sends message from `etorrent_event. 
-%%      This function is called by cascadae_event.
+%% @doc Sends message from `etorrent_event'. 
+%%      This function is called by `cascadae_event'.
 fire_event(Mess) ->
     gen_fsm:send_event(?SERVER, {log_event, Mess}).
 
@@ -278,7 +278,7 @@ query_torrent_list() ->
 
 
 %% @doc Returns HOF.
-%%      The HOF converts a proplist from etorrent_query:torrent_list 
+%%      The HOF converts a proplist from `etorrent_query:torrent_list'
 %%      to a proplist for JSON.
 %% @end
 form_json_proplist_fn() ->
@@ -402,6 +402,7 @@ map_records(_F, _OldLeft, _NewLeft, Acc) ->
     
 
 
+-spec diff_records([#torrent{}], [#torrent{}]) -> #diff_acc{}.
 diff_records(Olds, News) ->
     diff_records(Olds, News, #diff_acc{}).
 
@@ -409,7 +410,6 @@ diff_records(Olds, News) ->
 %% @doc Calculate the difference beetween two sets of torrents. 
 %%
 %%      Note: Both lists are sorted.
--spec diff_records([#torrent{}], [#torrent{}]) -> #diff_acc{}.
 diff_records([Old=#torrent{id=Id} | OldT], 
              [New=#torrent{id=Id} | NewT], Acc) ->
 
