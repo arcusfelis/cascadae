@@ -1,3 +1,10 @@
+/* ************************************************************************
+
+#asset(qx/icon/Tango/16/mimetypes/office-document.png)
+#asset(qx/icon/Tango/16/places/folder.png)
+
+************************************************************************ */
+
 qx.Class.define("cascadae.wishlist.List",
 {
   extend : qx.ui.form.List,
