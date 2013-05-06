@@ -186,7 +186,7 @@ active(update, SD=#state{
     % Run timer again
     TRef = gen_fsm:send_event_after(Timeout, update),
 
-    {next_state, active, SD#state{torrents=NewTorrents, timer=TRef}}.
+    {next_state, active, SD#state{torrents=NewTorrents2, timer=TRef}}.
 
 
 % Another client was connected.
@@ -348,20 +348,14 @@ sort_records(List) ->
 
 
 calc_speed_records(Olds, News, Tick) ->
-    FU = fun(#torrent{uploaded=X, speed_out=0}, 
-             #torrent{uploaded=X, speed_out=0}=New) -> New;
-            (#torrent{uploaded=X}, 
-             #torrent{uploaded=X}=New) -> New#torrent{speed_out=0};
-            (#torrent{uploaded=O}, 
+    %% Update outgoing traffic stats
+    FU = fun(#torrent{uploaded=O}, 
              #torrent{uploaded=N}=New) -> 
                 New#torrent{speed_out=calc_speed(O, N, Tick)}
         end,
 
-    FD = fun(#torrent{downloaded=X, speed_in=0}, 
-             #torrent{downloaded=X, speed_in=0}=New) -> New;
-            (#torrent{downloaded=X}, 
-             #torrent{downloaded=X}=New) -> New#torrent{speed_in=0};
-            (#torrent{downloaded=O}, 
+    %% Update incoming traffic stats
+    FD = fun(#torrent{downloaded=O}, 
              #torrent{downloaded=N}=New) -> 
                 New#torrent{speed_in=calc_speed(O, N, Tick)}
         end,
@@ -370,10 +364,15 @@ calc_speed_records(Olds, News, Tick) ->
     map_records(F, Olds, News).
 
 
-calc_speed(Old, New, Interval) ->
+calc_speed(Old, Old, _Interval) ->
+    0;
+calc_speed(Old, New, Interval) when Old < New ->
     Bytes = New - Old,
     Seconds = Interval / 1000,
-    Bytes / Seconds.
+    Bytes / Seconds;
+calc_speed(Old, New, _Interval) ->
+    lager:warning("Stat decreased from ~p to ~p.", [Old, New]),
+    0.
 
 
 %% @doc Tip: New torrents will be unchanged.
