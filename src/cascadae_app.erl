@@ -14,7 +14,23 @@ start() ->
 	application:start(cascadae).
 
 
-start(_Type, _Args) ->
+start(_Type, Args) ->
+    Envs = application:get_all_env(cascadae),
+    lager:info("Starting application \"cascadae\" with arguments ~p. "
+                "Environment variables are ~p.", [Args, Envs]),
+    IsEnabled  = proplists:get_value(webui, Envs),
+    ListenPort = proplists:get_value(webui_port, Envs),
+    %% Errors :: {Reason :: term(), Failed :: boolean()}
+    Errors = [{disabled, IsEnabled /= true},
+              {{required_param, webui_port}, not is_integer(ListenPort)}],
+    ErrorReasons = [Reason || {Reason, true} <- Errors],
+    case ErrorReasons of
+        []    -> start_webui(ListenPort);
+        [_|_] -> {error, ErrorReasons}
+    end.
+
+
+start_webui(ListenPort) ->
     PrivDir     = code:priv_dir(?APP),
     BuildDir    = abs_path(filename:join([PrivDir, "html"])),
     SIODir      = abs_path(filename:join([PrivDir, "socket.io-client"])),
@@ -50,7 +66,7 @@ start(_Type, _Args) ->
                  [{directory, BuildDir}|StaticFilesCfg]}
 		]}
     ]),
-    {ok, _} = cowboy:start_http(cascadae_http, 100, [{port, 1080}], [
+    {ok, _} = cowboy:start_http(cascadae_http, 100, [{port, ListenPort}], [
                     {env, [{dispatch, Dispatch}]}
                 ]),
 	cascadae_sup:start_link().
