@@ -107,10 +107,10 @@ qx.Class.define("cascadae.speedControl.Info",
     {
       var data = e.getData();
       this.setBulkUpdate(true);
-      if (data.recv_rate) this.setRecvRate(data.recv_rate);
-      if (data.send_rate) this.setSendRate(data.send_rate);
-      if (data.max_recv_rate) this.setMaxRecvRate(data.max_recv_rate);
-      if (data.max_send_rate) this.setMaxSendRate(data.max_send_rate);
+      if (!isNaN(data.recv_rate)) this.setRecvRate(data.recv_rate);
+      if (!isNaN(data.send_rate)) this.setSendRate(data.send_rate);
+      if (!isNaN(data.max_recv_rate)) this.setMaxRecvRate(data.max_recv_rate);
+      if (!isNaN(data.max_send_rate)) this.setMaxSendRate(data.max_send_rate);
       this.setBulkUpdate(false);
     },
     _applyRecvRate: function(value)
