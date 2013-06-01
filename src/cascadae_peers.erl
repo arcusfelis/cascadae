@@ -22,6 +22,7 @@
     %% Dynamic
     %%  From table
     state,
+    version,
     %%  From peer state
     choke_state,
     interest_state,
@@ -251,6 +252,7 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
                     {value, PL2_} -> PL2_;
                     not_found     -> []
                   end,
+            PLVersion = proplists:get_value(version, PL),
             PLState = proplists:get_value(state, PL),
             PL2ChokeS = proplists:get_value(choke_state, PL2),
             PL2InterS = proplists:get_value(interest_state, PL2),
@@ -263,6 +265,7 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
                 ,{ip, render_ip(proplists:get_value(ip, PL))}
                 ,{port, proplists:get_value(port, PL)}
 
+                ,{version, PLVersion}
                 ,{state, atom_to_binary(PLState)}
                 ,{choke_state, atom_to_binary(PL2ChokeS)}
                 ,{interest_state, atom_to_binary(PL2InterS)}
@@ -274,6 +277,7 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
                 %% Dynamic
                 %%  From table
                 state=PLState,
+                version=PLVersion,
                 %%  From peer state
                 choke_state=PL2ChokeS,
                 interest_state=PL2InterS,
@@ -338,6 +342,7 @@ diff_peer(Tid, Pid, OldPeer) ->
                     not_found     -> []
                   end,
             PLState = proplists:get_value(state, PL),
+            PLVersion = proplists:get_value(version, PL),
             PL2ChokeS = proplists:get_value(choke_state, PL2),
             PL2InterS = proplists:get_value(interest_state, PL2),
             PL2LocalC = proplists:get_value(local_choke, PL2),
@@ -347,6 +352,7 @@ diff_peer(Tid, Pid, OldPeer) ->
                 %% Dynamic
                 %%  From table
                 state=PLState,
+                version=PLVersion,
                 %%  From peer state
                 choke_state=PL2ChokeS,
                 interest_state=PL2InterS,
@@ -361,6 +367,7 @@ diff_peer(Tid, Pid, OldPeer) ->
                         %% Dynamic
                         %%  From table
                         state=OldPLState,
+                        version=OldPLVersion,
                         %%  From peer state
                         choke_state=OldPL2ChokeS,
                         interest_state=OldPL2InterS,
@@ -371,6 +378,9 @@ diff_peer(Tid, Pid, OldPeer) ->
                     Diff = [{id, to_binary(Pid)}]
                     ++ if PLState =:= OldPLState -> [];
                           true -> [{state, atom_to_binary(PLState)}]
+                       end
+                    ++ if PLVersion =:= OldPLVersion -> [];
+                          true -> [{version, PLVersion}]
                        end
                     ++ if PL2ChokeS =:= OldPL2ChokeS -> [];
                           true -> [{choke_state, atom_to_binary(PL2ChokeS)}]

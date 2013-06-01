@@ -16,6 +16,7 @@ qx.Class.define("cascadae.peers.Table",
     {
       "id"             : this.tr("Pid"),
       "torrent_id"     : this.tr("Id"),
+      "version"        : this.tr("Version"),
       "ip"             : this.tr("IP"),
       "port"           : this.tr("Port"),
       "state"          : this.tr("State"),
@@ -34,6 +35,7 @@ qx.Class.define("cascadae.peers.Table",
     var rb = tcm.getBehavior();
 
     rb.set(n2p.id,               { width:"1*", minWidth: 70 });
+    rb.set(n2p.version,          { width:"1*", minWidth: 100 });
     rb.set(n2p.ip,               { width:"1*", minWidth: 100 });
     rb.set(n2p.port,             { width:"1*", minWidth: 50 });
     rb.set(n2p.torrent_id,       { width:"1*", minWidth: 30 });
