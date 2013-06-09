@@ -22,8 +22,8 @@ qx.Class.define("cascadae.Helpers",
         for (var i=0; i<3; i++)
         {
           var num = order[i];
-          var bit1 = parseInt(pid1[num]);
-          var bit2 = parseInt(pid2[num]);
+          var bit1 = parseInt(pid1[num], 10);
+          var bit2 = parseInt(pid2[num], 10);
           if (bit1 < bit2) return -1;
           if (bit1 > bit2) return 1;
         }
@@ -48,8 +48,8 @@ qx.Class.define("cascadae.Helpers",
 
         for (var i=0; i<4; i++)
         {
-          var bit1 = parseInt(ip1[i]);
-          var bit2 = parseInt(ip2[i]);
+          var bit1 = parseInt(ip1[i], 10);
+          var bit2 = parseInt(ip2[i], 10);
           if (bit1 < bit2) return -1;
           if (bit1 > bit2) return 1;
         }
