@@ -104,7 +104,6 @@ qx.Class.define("cascadae.Socket", {
     this.__propertyRegister = [];
     this.__listeners = [];
     this.addListener("disconnect", this.__handleDisconnect, this);
-    this.addListener("reconnect", this.__handleReconnect, this);
     this.addListener("connect", this.__handleConnect, this);
   },
 
@@ -292,7 +291,6 @@ qx.Class.define("cascadae.Socket", {
     {
       this.__destroySocket();
       this.connect();
-      this.__handleReconnect();
     },
 
     reload : function()
@@ -321,19 +319,15 @@ qx.Class.define("cascadae.Socket", {
 
     __handleDisconnect: function()
     {
+      this.info("Handle disconnect.");
       this.setConnected(false);
       this.__cancelAllListeners();
     },
 
     __handleConnect: function()
     {
+      this.info("Handle connect.");
       this.setConnected(true);
-    },
-
-    __handleReconnect: function()
-    {
-      this.setConnected(true);
-      this.info("Handle reconnect.");
       // Submit registered objects again
       var os = this.__objectRegister;
       for (var i = 0, l = os.length; i < l; i++)

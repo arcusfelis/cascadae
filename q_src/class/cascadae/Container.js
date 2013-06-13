@@ -80,11 +80,11 @@ qx.Class.define("cascadae.Container",
     socket.registerObject(this);
     socket.bindRemoteProperty(this, "pageVisible");
 
-    this.addListener("changeEnabled", this._onChangeEnabled, this);
-
     // With that code every change of the connected property of socket will
     // automatically synchronize the enabled property of container.
     socket.bind("connected", this, "enabled");
+
+    this.addListener("changeEnabled", this._onChangeEnabled, this);
   },
 
   members :
