@@ -20,9 +20,9 @@ qx.Class.define("cascadae.peers.Table",
       "ip"             : this.tr("IP"),
       "port"           : this.tr("Port"),
       "state"          : this.tr("State"),
-      "choke_state"    : this.tr("Choking"),
-      "interest_state" : this.tr("Intersted"),
-      "local_choke"    : this.tr("Is choking?"),
+      "l_choked"       : this.tr("Choked"),    // We are blocking this peer.
+      "r_choked"       : this.tr("Choking"),   // We are blocked by this peer.
+      "r_interested"   : this.tr("Intersted"), // This peer is interested in us.
       "recv_rate"      : this.tr("Rate In"),
       "send_rate"      : this.tr("Rate Out")
     };
@@ -40,21 +40,25 @@ qx.Class.define("cascadae.peers.Table",
     rb.set(n2p.port,             { width:"1*", minWidth: 50 });
     rb.set(n2p.torrent_id,       { width:"1*", minWidth: 30 });
     rb.set(n2p.state,            { width:"1*", minWidth: 60 });
-    rb.set(n2p.interest_state,   { width:"1*", minWidth: 60 });
-    rb.set(n2p.choke_state,      { width:"1*", minWidth: 60 });
-    rb.set(n2p.local_choke,      { width:"1*", minWidth: 40 });
+    rb.set(n2p.r_interested,     { width:"1*", minWidth: 40 });
+    rb.set(n2p.r_choked,         { width:"1*", minWidth: 40 });
+    rb.set(n2p.l_choked,         { width:"1*", minWidth: 40 });
     rb.set(n2p.recv_rate,        { width:"1*", minWidth: 70 });
     rb.set(n2p.send_rate,        { width:"1*", minWidth: 70 });
 
     tcm.setDataCellRenderer(n2p.recv_rate, new cascadae.cellrenderer.Speed());
     tcm.setDataCellRenderer(n2p.send_rate, new cascadae.cellrenderer.Speed());
 
-    tcm.setDataCellRenderer(n2p.local_choke, 
-      new qx.ui.table.cellrenderer.Boolean());
+    [ n2p.r_interested
+    , n2p.r_choked
+    , n2p.l_choked ].map(function(id) {
+        tcm.setDataCellRenderer(id, 
+          new qx.ui.table.cellrenderer.Boolean());
+    });
 
-    [ n2p.interest_state
-    , n2p.choke_state
-    , n2p.local_choke ].map(function(id) {
+    [ n2p.r_interested
+    , n2p.r_choked
+    , n2p.l_choked ].map(function(id) {
       tcm.setColumnVisible(id, false);
     });
 

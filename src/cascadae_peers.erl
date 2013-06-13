@@ -267,9 +267,9 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
 
                 ,{version, PLVersion}
                 ,{state, atom_to_binary(PLState)}
-                ,{choke_state, atom_to_binary(PL2ChokeS)}
-                ,{interest_state, atom_to_binary(PL2InterS)}
-                ,{local_choke, PL2LocalC} % bool
+                ,{r_choked, is_choked(PL2ChokeS)}
+                ,{r_interested, is_interested(PL2InterS)}
+                ,{l_choked, PL2LocalC} % bool
                 ,{recv_rate, RecvRate}
                 ,{send_rate, SendRate}
                 ],
@@ -383,13 +383,13 @@ diff_peer(Tid, Pid, OldPeer) ->
                           true -> [{version, PLVersion}]
                        end
                     ++ if PL2ChokeS =:= OldPL2ChokeS -> [];
-                          true -> [{choke_state, atom_to_binary(PL2ChokeS)}]
+                          true -> [{r_choked, is_choked(PL2ChokeS)}]
                        end
                     ++ if PL2InterS =:= OldPL2InterS -> [];
-                          true -> [{interest_state, atom_to_binary(PL2InterS)}]
+                          true -> [{r_interested, is_interested(PL2InterS)}]
                        end
                     ++ if PL2LocalC =:= OldPL2LocalC -> [];
-                          true -> [{local_choke, PL2LocalC}]
+                          true -> [{l_choked, PL2LocalC}]
                        end
                     ++ if RecvRate =:= OldRecvRate -> [];
                           true -> [{recv_rate, RecvRate}]
@@ -402,3 +402,10 @@ diff_peer(Tid, Pid, OldPeer) ->
         not_found -> same
     end.
 
+is_choked(choked)    -> true;
+is_choked(unchoked)  -> false;
+is_choked(undefined) -> undefined.
+
+is_interested(interested)     -> true;
+is_interested(not_interested) -> false;
+is_interested(undefined)      -> undefined.
