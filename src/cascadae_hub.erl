@@ -156,7 +156,7 @@ active({log_event, Mess}, SD=#state{handlers=Handlers}) ->
 
     lists:map(fun(H) ->
         ?HANDLER_MODULE:send(H, {log_event, PL})
-        end, Handlers),
+        end, handler_pids(Handlers)),
 
     {next_state, active, SD};
 
