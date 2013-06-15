@@ -156,7 +156,10 @@ active({resume_handler, OldSpeed}, {Pid, _Tag},
 
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}=_Info, active, SD) ->
-    remove_handler(Pid, SD).
+    remove_handler(Pid, SD);
+handle_info({'DOWN', _Ref, process, _Pid, _Reason}=_Info, await, SD) ->
+    %% unexpected.
+    {next_state, await, SD}.
     
 
 terminate(_Reason, _SN, _SD) ->
