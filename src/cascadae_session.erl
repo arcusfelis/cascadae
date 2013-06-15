@@ -36,7 +36,7 @@
 }).
 
 %% API
-send(SPid, Mess) ->
+send(SPid, Mess) when is_pid(SPid) ->
     SPid ! Mess.
 
 %% ---- Handlers

@@ -76,7 +76,7 @@
 -record(state, {
     timer :: reference(),
     torrents :: [#torrent{}] | undefined,
-    handlers = [] :: [pid()],
+    handlers = [] :: [{pid(), reference()}],
     tick :: integer()
 }).
 
@@ -115,9 +115,6 @@ await({log_event, _Mess}, SD) ->
 % Initialization after "sleeping mode".
 await(add_handler, {Pid, _Tag}, SD=#state{tick=Timeout}) ->
     lager:info("Add the first client on ~w.", [Pid]),
-
-    % Registration of the client
-    erlang:monitor(process, Pid),
     
     % Subscribe on new events.
     cascadae_event:add(),
@@ -129,17 +126,12 @@ await(add_handler, {Pid, _Tag}, SD=#state{tick=Timeout}) ->
 
     % Run timer
     TRef = gen_fsm:send_event_after(Timeout, update),
-    SD1 = SD#state{timer=TRef, 
-                handlers=[Pid],
-                torrents=NewTorrents},
+    SD1 = store_first_handler(Pid, SD#state{timer=TRef, torrents=NewTorrents}),
 
     {reply, ok, active, SD1};
 await({resume_handler, OldTorrents},
       {Pid, _Tag}, SD=#state{tick=Timeout}) ->
     lager:info("Add the first client on ~w.", [Pid]),
-
-    % Registration of the client
-    erlang:monitor(process, Pid),
     
     % Subscribe on new events.
     cascadae_event:add(),
@@ -152,9 +144,7 @@ await({resume_handler, OldTorrents},
 
     % Run timer
     TRef = gen_fsm:send_event_after(Timeout, update),
-    SD1 = SD#state{timer=TRef, 
-                handlers=[Pid],
-                torrents=NewTorrents},
+    SD1 = store_first_handler(Pid, SD#state{timer=TRef, torrents=NewTorrents}),
 
     {reply, ok, active, SD1}.
 
@@ -181,7 +171,7 @@ active(update, SD=#state{
     UnsortedNewTorrents = lists:map(fun to_record/1, PLs),
     NewTorrents = sort_records(UnsortedNewTorrents),
     NewTorrents2 = calc_speed_records(OldTorrents, NewTorrents, Timeout),
-    send_diff_records(Handlers, OldTorrents, NewTorrents2, PLs),
+    send_diff_records(handler_pids(Handlers), OldTorrents, NewTorrents2, PLs),
 
     % Run timer again
     TRef = gen_fsm:send_event_after(Timeout, update),
@@ -197,9 +187,7 @@ active(add_handler, {Pid, _Tag}, SD=#state{handlers=Hs}) ->
             lager:error("Cannot add a handler twice for the same process ~p.", [Pid]),
             {reply, ok, active, SD};
         false ->
-            % Registration of the client
-            erlang:monitor(process, Pid),
-            SD1 = SD#state{handlers=[Pid|Hs]},
+            SD1 = store_handler(Pid, SD),
             {reply, ok, active, SD1}
     end;
 active(suspend_handler, {Pid, _Tag}, SD=#state{torrents=Torrents}) ->
@@ -216,10 +204,8 @@ active({resume_handler, OldTorrents}, {Pid, _Tag},
                         [Pid]),
             {reply, ok, active, SD};
         false ->
-            % Registration of the client
-            erlang:monitor(process, Pid),
             send_diff_records([Pid], OldTorrents, NewTorrents, undefined),
-            SD1 = SD#state{handlers=[Pid|Hs]},
+            SD1 = store_handler(Pid, SD),
             {reply, ok, active, SD1}
     end.
 
@@ -574,24 +560,31 @@ integer_hash_to_literal(InfoHashInt) when is_integer(InfoHashInt) ->
 
 
 remove_handler(Pid, SD=#state{handlers=Hs, timer=TRef}) ->
-    case Hs -- [Pid] of
-        [] ->
-            cascadae_event:delete(),
+    case lists:keytake(Pid, 1, Hs) of
+        {value, {Pid, Ref}, NHs} ->
+            demonitor(Ref, [flush]),
+            case NHs of
+                [] ->
+                    cascadae_event:delete(),
 
-            % Go to the sleeping mode.
-            gen_fsm:cancel_timer(TRef),
-            SD1 = SD#state{handlers=[], torrents=undefined},
-            lager:info("Delete the last client on ~w.", [Pid]),
-            {next_state, await, SD1};
+                    % Go to the sleeping mode.
+                    gen_fsm:cancel_timer(TRef),
+                    SD1 = SD#state{handlers=[], torrents=undefined},
+                    lager:info("Delete the last client on ~w.", [Pid]),
+                    {next_state, await, SD1};
 
-        NHs ->
-            % Just continue.
-            lager:info("Delete the client on ~w.", [Pid]),
-            {next_state, active, SD#state{handlers=NHs}}
+                NHs ->
+                    % Just continue.
+                    lager:info("Delete the client on ~w.", [Pid]),
+                    {next_state, active, SD#state{handlers=NHs}}
+            end;
+        false ->
+            lager:debug("Key not found."),
+            {next_state, active, SD#state{}}
     end.
 
 
-send_diff_records(Handlers, OldTorrents, NewTorrents, PLs) ->
+send_diff_records(HandlerPids, OldTorrents, NewTorrents, PLs) ->
 
     #diff_acc{
         diff=Diff, 
@@ -601,7 +594,7 @@ send_diff_records(Handlers, OldTorrents, NewTorrents, PLs) ->
     SendFn = fun(Mess) ->
         lists:map(fun(H) ->
             ?HANDLER_MODULE:send(H, Mess)
-            end, Handlers)
+            end, HandlerPids)
         end,
 
     case Diff of
@@ -645,3 +638,16 @@ send_diff_records(Handlers, OldTorrents, NewTorrents, PLs) ->
     end,
 
     ok.
+
+
+% Registration of the client
+store_handler(ClientPid, SD=#state{handlers=Hs}) ->
+    MonRef = erlang:monitor(process, ClientPid),
+    SD#state{handlers=[{ClientPid, MonRef}|Hs]}.
+
+
+store_first_handler(ClientPid, SD) ->
+    MonRef = erlang:monitor(process, ClientPid),
+    SD#state{handlers=[{ClientPid, MonRef}]}.
+
+handler_pids(Handlers) -> [Pid || {Pid, _Ref} <- Handlers].

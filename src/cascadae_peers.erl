@@ -164,7 +164,9 @@ viz_delete_peers(DeletedTP,
     lager:info("Deleted peers ~p.", [DeletedTP]),
     NewClSTP = ordsets:subtract(OldClSTP, DeletedTP),
     NewVizSTP = ordsets:subtract(OldVizSTP, DeletedTP),
-    ClDeletedTP = ordsets:subtract(DeletedTP, OldClSTP),
+    %% These visible peers will be deleted on the client.
+    %% Invisible deleted peers will be waiting.
+    ClDeletedTP = ordsets:intersection(DeletedTP, OldVizSTP),
     case ClDeletedTP of
         [] -> S;
         [_|_] ->
