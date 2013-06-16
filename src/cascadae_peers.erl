@@ -312,7 +312,6 @@ viz_diff_peers(S=#peers_state{viz_tid_pids=VizSTP, peers=Peers}) ->
     case Diff of
         [] -> S;
         [_|_] ->
-            lager:info("Diff ~p", [Diff]),
             push_to_client({diff_list, Diff}, S),
             S#peers_state{peers=NewPeers}
     end.
