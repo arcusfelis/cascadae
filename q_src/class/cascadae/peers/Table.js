@@ -62,7 +62,8 @@ qx.Class.define("cascadae.peers.Table",
 
     [ n2p.r_interested
     , n2p.r_choked
-    , n2p.l_choked ].map(function(id) {
+    , n2p.l_choked 
+    , n2p.state ].map(function(id) {
       tcm.setColumnVisible(id, false);
     });
 
