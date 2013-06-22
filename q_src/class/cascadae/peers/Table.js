@@ -20,11 +20,12 @@ qx.Class.define("cascadae.peers.Table",
       "ip"             : this.tr("IP"),
       "port"           : this.tr("Port"),
       "state"          : this.tr("State"),
-      "l_choked"       : this.tr("Choked"),    // We are blocking this peer.
-      "r_choked"       : this.tr("Choking"),   // We are blocked by this peer.
-      "r_interested"   : this.tr("Intersted"), // This peer is interested in us.
+      "l_choked"       : this.tr("Choked"),     // We are blocking this peer.
+      "r_choked"       : this.tr("Choking"),    // We are blocked by this peer.
+      "r_interested"   : this.tr("Interested"), // This peer is interested in us.
       "recv_rate"      : this.tr("Rate In"),
-      "send_rate"      : this.tr("Rate Out")
+      "send_rate"      : this.tr("Rate Out"),
+      "progress"       : this.tr("Progress")
     };
 
     this.base(arguments, n2c);
@@ -45,9 +46,12 @@ qx.Class.define("cascadae.peers.Table",
     rb.set(n2p.l_choked,         { width:"1*", minWidth: 40 });
     rb.set(n2p.recv_rate,        { width:"1*", minWidth: 70 });
     rb.set(n2p.send_rate,        { width:"1*", minWidth: 70 });
+    rb.set(n2p.progress,         { width:"1*", minWidth:65, maxWidth:80  });
 
     tcm.setDataCellRenderer(n2p.recv_rate, new cascadae.cellrenderer.Speed());
     tcm.setDataCellRenderer(n2p.send_rate, new cascadae.cellrenderer.Speed());
+    tcm.setDataCellRenderer(n2p.progress, 
+        new cascadae.cellrenderer.Progress());
 
     [ n2p.r_interested
     , n2p.r_choked

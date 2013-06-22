@@ -23,6 +23,7 @@
     %%  From table
     state,
     version,
+    progress :: float() | undefined,
     %%  From peer state
     choke_state,
     interest_state,
@@ -203,7 +204,7 @@ viz_add_peers(AddedTP, S=#peers_state{cl_tid_pids=OldClSTP, viz_tid_pids=OldVizS
 
 
 push_to_client(Mess, #peers_state{ session_pid=Session, session_tag=Tag }) ->
-    lager:info("Send ~p to ~p.", [{Tag, Mess}, Session]),
+    lager:debug("Send ~p to ~p.", [{Tag, Mess}, Session]),
     cascadae_session:send(Session, {Tag, Mess}).
 
 
@@ -255,6 +256,7 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
                     not_found     -> []
                   end,
             PLVersion = proplists:get_value(version, PL),
+            PLProgress = proplists:get_value(progress, PL),
             PLState = proplists:get_value(state, PL),
             PL2ChokeS = proplists:get_value(choke_state, PL2),
             PL2InterS = proplists:get_value(interest_state, PL2),
@@ -268,6 +270,7 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
                 ,{port, proplists:get_value(port, PL)}
 
                 ,{version, PLVersion}
+                ,{progress, PLProgress}
                 ,{state, atom_to_binary(PLState)}
                 ,{r_choked, is_choked(PL2ChokeS)}
                 ,{r_interested, is_interested(PL2InterS)}
@@ -280,6 +283,7 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
                 %%  From table
                 state=PLState,
                 version=PLVersion,
+                progress=PLProgress,
                 %%  From peer state
                 choke_state=PL2ChokeS,
                 interest_state=PL2InterS,
@@ -344,6 +348,7 @@ diff_peer(Tid, Pid, OldPeer) ->
                   end,
             PLState = proplists:get_value(state, PL),
             PLVersion = proplists:get_value(version, PL),
+            PLProgress = proplists:get_value(progress, PL),
             PL2ChokeS = proplists:get_value(choke_state, PL2),
             PL2InterS = proplists:get_value(interest_state, PL2),
             PL2LocalC = proplists:get_value(local_choke, PL2),
@@ -354,6 +359,7 @@ diff_peer(Tid, Pid, OldPeer) ->
                 %%  From table
                 state=PLState,
                 version=PLVersion,
+                progress=PLProgress,
                 %%  From peer state
                 choke_state=PL2ChokeS,
                 interest_state=PL2InterS,
@@ -369,6 +375,7 @@ diff_peer(Tid, Pid, OldPeer) ->
                         %%  From table
                         state=OldPLState,
                         version=OldPLVersion,
+                        progress=OldPLProgress,
                         %%  From peer state
                         choke_state=OldPL2ChokeS,
                         interest_state=OldPL2InterS,
@@ -382,6 +389,9 @@ diff_peer(Tid, Pid, OldPeer) ->
                        end
                     ++ if PLVersion =:= OldPLVersion -> [];
                           true -> [{version, PLVersion}]
+                       end
+                    ++ if PLProgress =:= OldPLProgress -> [];
+                          true -> [{progress, PLProgress}]
                        end
                     ++ if PL2ChokeS =:= OldPL2ChokeS -> [];
                           true -> [{r_choked, is_choked(PL2ChokeS)}]

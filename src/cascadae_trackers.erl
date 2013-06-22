@@ -188,7 +188,7 @@ viz_add_trackers(AddedTT, S=#trackers_state{cl_ttids=OldClSTT,
 
 
 push_to_client(Mess, #trackers_state{ session_pid=Session, session_tag=Tag }) ->
-    lager:info("Send ~p to ~p.", [{Tag, Mess}, Session]),
+    lager:debug("Send ~p to ~p.", [{Tag, Mess}, Session]),
     cascadae_session:send(Session, {Tag, Mess}).
 
 
