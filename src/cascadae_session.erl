@@ -150,6 +150,14 @@ recv(_, _, {event, <<>>, <<"d_stopTorrents">>, Meta}, State) ->
     Ids = proplists:get_value(<<"torrent_ids">>, Data),
     lists:map(fun etorrent_ctl:pause/1, Ids),
     {ok, State};
+recv(SPid, _, {event, <<>>, <<"d_requestMagnetLinks">>, Meta}, State) ->
+    Hash = proplists:get_value(<<"hash">>, Meta),
+    Data = proplists:get_value(<<"data">>, Meta),
+    Ids = proplists:get_value(<<"torrent_ids">>, Data),
+    Links = [{int_to_bin(Id), etorrent_info:magnet_link(Id)} || Id <- Ids],
+    RespondData = [{<<"magnet_links">>, Links}],
+    fire_data_event(SPid, Hash, <<"rd_respondMagnetLinks">>, RespondData),
+    {ok, State};
 
 %% FILES
 %% Request children of the file tree.
@@ -539,3 +547,7 @@ check_speed_hub_state(S=#sess_state{is_page_visible=false, saved_speed_hub_state
     SavedHubState = cascadae_speed_hub:suspend_handler(),
     S#sess_state{saved_speed_hub_state=SavedHubState};
 check_speed_hub_state(S=#sess_state{is_page_visible=false}) -> S.
+
+
+int_to_bin(X) ->
+    list_to_binary(integer_to_list(X)).

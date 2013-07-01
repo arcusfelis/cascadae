@@ -20,7 +20,9 @@ qx.Class.define("cascadae.Table",
   events :
   {
     "d_startTorrents" : "qx.event.type.Data",
-    "d_stopTorrents"  : "qx.event.type.Data"
+    "d_stopTorrents"  : "qx.event.type.Data",
+    "d_requestMagnetLinks" : "qx.event.type.Data",
+    "rd_respondMagnetLinks" : "qx.event.type.Data"
   },
 
   construct : function(speedInfo)
@@ -120,6 +122,7 @@ qx.Class.define("cascadae.Table",
     tm.setSortMethods(n2p.pid, cascadae.Helpers.buildPidComparator(n2p.pid));
     var sm = this.getSelectionModel();
     sm.addListener("changeSelection", this.__refreshTorrentId, this);
+    this.addListener("rd_respondMagnetLinks",  this.__handleMagnetLinksRespond,  this);
   },
 
   members :
@@ -208,6 +211,29 @@ qx.Class.define("cascadae.Table",
       this.info("startSelectedRows");
       var data = {"torrent_ids": this.getSelectedIds()};
       this.fireDataEvent("d_startTorrents", data);
+    },
+
+    requestMagnetLinksForSelectedRows : function()
+    {
+      var data = {"torrent_ids": this.getSelectedIds()};
+      this.fireDataEvent("d_requestMagnetLinks", data);
+    },
+
+    __handleMagnetLinksRespond : function(e)
+    {
+      var data = e.getData();
+      var links = data.magnet_links;
+
+      var win = this.__showMagnetLinkWindow;
+      if (!win)
+      {
+        this.__showMagnetLinkWindow = win = new cascadae.ShowMagnetLinkWindow();
+        qx.core.Init.getApplication().getRoot().add(win);
+        win.addListener("close", this.focus, this);
+      }
+        
+      win.setLinks(links);
+      win.show();
     },
 
 

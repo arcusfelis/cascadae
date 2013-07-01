@@ -137,6 +137,7 @@ qx.Class.define("cascadae.Container",
 //    this._initToolbarFileButtonActivation();
       this.__socket.addRemoteListener(this.__table, "d_startTorrents");
       this.__socket.addRemoteListener(this.__table, "d_stopTorrents");
+      this.__socket.addRemoteListener(this.__table, "d_requestMagnetLinks");
       // Do heavy calculations in idle time
       // document.setTimeout
       qx.event.Timer.once(this._initViews, this, 3000);
@@ -377,6 +378,10 @@ qx.Class.define("cascadae.Container",
 //    win.focus();
     },
 
+    requestMagnetLinks : function() {
+        this.__table.requestMagnetLinksForSelectedRows();
+    },
+
     /**
      * Get the command with the given command id
      *
@@ -431,6 +436,10 @@ qx.Class.define("cascadae.Container",
       commands.unskipSelectedFiles = new qx.ui.core.Command("Control+U");
       commands.unskipSelectedFiles.setToolTipText("Control+U");
       commands.unskipSelectedFiles.addListener("execute", this.unskipSelectedFiles, this);
+
+      commands.requestMagnetLinks = new qx.ui.core.Command("Control+M");
+      commands.requestMagnetLinks.setToolTipText("Control+M");
+      commands.requestMagnetLinks.addListener("execute", this.requestMagnetLinks, this);
 
 
       // Special commands

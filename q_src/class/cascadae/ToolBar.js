@@ -107,6 +107,10 @@ qx.Class.define("cascadae.ToolBar",
         "icon/22/actions/media-playback-pause.png");
       this.__stopBtn.setCommand(controller.getCommand("stopSelectedRows"));
  
+      this.__magnetLinkBtn = new qx.ui.toolbar.Button(this.tr("Link"), 
+        "");
+      this.__magnetLinkBtn.setCommand(controller.getCommand("requestMagnetLinks"));
+ 
       this.__wishBtn = new qx.ui.toolbar.Button(this.tr("Wish files"), 
         "icon/22/actions/dialog-apply.png");
       this.__wishBtn.setCommand(controller.getCommand("wishSelectedFiles"));
@@ -171,6 +175,7 @@ qx.Class.define("cascadae.ToolBar",
       this.__mainButtons.add(this.__addBtn);
       this.__mainButtons.add(this.__startBtn);
       this.__mainButtons.add(this.__stopBtn);
+      this.__mainButtons.add(this.__magnetLinkBtn);
  
       this.add(this.__ctrlButtons);
       this.add(this.__mainButtons);
@@ -211,6 +216,7 @@ qx.Class.define("cascadae.ToolBar",
       [ this.__removeBtn
       , this.__startBtn
       , this.__stopBtn 
+      , this.__magnetLinkBtn
       ].map(function(x) {
         x.setEnabled(flag);
       });
