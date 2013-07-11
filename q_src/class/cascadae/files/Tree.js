@@ -404,6 +404,7 @@ qx.Class.define("cascadae.files.Tree",
           n2p = this.__n2p;
       if (this.getTorrentId() != tid)
         return;
+      var selected = dm.getSelection();
       for (var plen = data.nodes.length, i = 0; i<plen; i++) 
       {
         // node is {id, progress}
@@ -416,6 +417,8 @@ qx.Class.define("cascadae.files.Tree",
         if (node.progress !== undefined)
             dm.setValue(n2p.progress, rowIndex, node.progress);
       }
+      dm.setData();
+      dm.setSelection(selected);
     },
 
     /* Map is from server */
