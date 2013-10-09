@@ -269,7 +269,7 @@ get_peer(Tid, Pid, S=#peers_state{peers=Peers}) ->
                 ,{ip, render_ip(proplists:get_value(ip, PL))}
                 ,{port, proplists:get_value(port, PL)}
 
-                ,{version, PLVersion}
+                ,{version, strange_string_to_unicode_binary(PLVersion)}
                 ,{progress, PLProgress}
                 ,{state, atom_to_binary(PLState)}
                 ,{r_choked, is_choked(PL2ChokeS)}
@@ -388,7 +388,7 @@ diff_peer(Tid, Pid, OldPeer) ->
                           true -> [{state, atom_to_binary(PLState)}]
                        end
                     ++ if PLVersion =:= OldPLVersion -> [];
-                          true -> [{version, PLVersion}]
+                          true -> [{version, strange_string_to_unicode_binary(PLVersion)}]
                        end
                     ++ if PLProgress =:= OldPLProgress -> [];
                           true -> [{progress, PLProgress}]
@@ -420,3 +420,19 @@ is_choked(undefined) -> undefined.
 is_interested(interested)     -> true;
 is_interested(not_interested) -> false;
 is_interested(undefined)      -> undefined.
+
+strange_string_to_unicode_binary(Str) ->
+    case unicode:characters_to_binary(Str, utf8) of
+        UStr when is_binary(UStr) ->
+            UStr;
+        {error, _, _} ->
+            strange_string_to_unicode_binary2(Str)
+    end.
+
+strange_string_to_unicode_binary2(Str) ->
+    case unicode:characters_to_binary(Str, latin1) of
+        UStr when is_binary(UStr) ->
+            UStr;
+        {error, _, _} ->
+            <<>>
+    end.
